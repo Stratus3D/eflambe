@@ -1,2 +1,56 @@
 = E flambè
 
+* Designed for rapid generation of flamegraphs - no need to edit source code or recompile!
+* Generates output in several common formats - perf and Brendan Gregg's
+* Interface inspired by recon_trace to automatically stop flamegraph generation
+* Can automatically open data your flamegraph viewer of choice
+
+== Example Output
+
+<insert screenshot of speedscope>
+
+== Description
+
+This tool is designed to be the first profiling tool you reach for during development. It is designed for rapid visualization of program execution. It generates one or more flamegraphs of any function you specify. You can easily select function(s) to profile in the shell without having to alter your code or restart your application. This tool has two distinct advantages over existing flamegraph generators in Erlang:
+
+* It doesn't require the user to insert profiling code into the functions they want to visualize as flamegraphs. Everything can be done on the fly without restarting your application.
+* It generates output in formats used by most flamegraph viewers. No manual post-processing is needed.
+* No Perl code.
+
+== Installation
+
+=== Elixir
+
+Add the following line to your `mix.exs` file:
+
+[source, elixir]
+----
+----
+
+=== Erlang
+
+Add the following line to your `rebar.config` file:
+
+[source, elixir]
+----
+----
+
+== Usage
+
+=== Interactive Use
+
+=== Manually placing start/stop calls
+
+=== Output Formats
+
+== Example Outputs
+
+== Contributing
+
+Feedback is welcome! This was started as a hackathon project but I plan on maintaining it for my teams every day use, so if you see something that could be improved please open an issue!
+
+== Tracer Modukle
+
+----
+
+----
