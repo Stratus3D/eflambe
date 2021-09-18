@@ -102,7 +102,7 @@ apply({Function, Args}, NumCalls, Options) ->
 %%% Internal functions
 %%%===================================================================
 
--spec start_trace(TraceId :: any(), NumCalls :: integer(), Options :: list()) -> ok.
+-spec start_trace(TraceId :: any(), NumCalls :: integer(), Options :: list()) -> reference().
 
 start_trace(TraceId, NumCalls, Options) ->
     % TODO: Figure if I can move this application start code elsewhere
