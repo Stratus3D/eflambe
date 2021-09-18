@@ -13,7 +13,8 @@
 
 -type mfa_fun() :: {atom(), atom(), list()} | fun().
 
--define(FLAGS, [call, return_to, running, procs, garbage_collection, arity, timestamp, set_on_spawn]).
+-define(FLAGS, [call, return_to, running, procs, garbage_collection, arity,
+                timestamp, set_on_spawn]).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -43,15 +44,17 @@ capture({Module, Function, Arity}, NumCalls, Options) ->
     % Unique identifer for the `NumCalls` number of traces for `Function`
     CaptureRef = make_ref(),
 
-    MockFun = mock_fun(Arity, fun(Args) ->
-                                      Trace = start_trace(CaptureRef, NumCalls, Options),
+    ShimmedFunction = fun(Args) ->
+        Trace = start_trace(CaptureRef, NumCalls, [{meck, Module}|Options]),
 
-                                      % Invoke the original function
-                                      Results = meck:passthrough(Args),
+        % Invoke the original function
+        Results = meck:passthrough(Args),
 
-                                      stop_trace(Trace),
-                                      Results
-                              end),
+        stop_trace(Trace),
+        Results
+    end,
+
+    MockFun = mock_fun(Arity, ShimmedFunction),
 
     % Replace the original function with our new function that wraps the old
     % function in profiling code.
@@ -117,8 +120,8 @@ start_trace(TraceId, NumCalls, Options) ->
             erlang:trace_pattern({'_', '_', '_'}, MatchSpec, [local]),
             erlang:trace(self(), true, [{tracer, Tracer} | ?FLAGS]);
         {ok, TraceId, false, _Tracer} ->
-            % Trace is already running. This must be a recursive function call.
-            % We do not need to do anything.
+            % Trace is already running or has already finished. Or this could
+            % be a recursive function call.  We do not need to do anything.
             ok
     end,
 
@@ -129,8 +132,8 @@ start_trace(TraceId, NumCalls, Options) ->
 stop_trace(Trace) ->
     case eflambe_server:stop_trace(Trace) of
         {error,  unknown_trace} -> ok;
-        {ok, Id, Calls, false, Options} -> ok;
-        {ok, Id, Calls, true, Options} ->
+        {ok, _Id, _Calls, false, _Options} -> ok;
+        {ok, _Id, _Calls, true, _Options} ->
             % Stop trace
             % TODO: Improve boolean values returned from eflambe_server
             erlang:trace(self(), false, [all])
