@@ -8,7 +8,10 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/0]).
+-export([
+         start_link/1,
+         finish/1
+        ]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -20,9 +23,9 @@
 -include_lib("kernel/include/logger.hrl").
 
 -define(SERVER, ?MODULE).
+-define(DEFAULT_OPTIONS, [{output_format, brendan_greggs}]).
 
-
--record(state, {}).
+-record(state, {options :: eflambe:options()}).
 
 -type state() :: #state{}.
 -type from() :: {pid(), Tag :: term()}.
@@ -37,10 +40,13 @@
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec start_link() -> {ok, pid()} | ignore | {error, Error :: any()}.
+-spec start_link(eflambe:options()) -> {ok, pid()} | ignore | {error, Error :: any()}.
 
-start_link() ->
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+start_link(Options) ->
+    gen_server:start_link(?MODULE, [Options], []).
+
+finish(Pid) ->
+    gen_server:call(Pid, finish).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -48,16 +54,20 @@ start_link() ->
 
 -spec init(Args :: list()) -> {ok, state()}.
 
-init([]) ->
-    {ok, #state{}}.
+init(Options) ->
+    % Generate complete list of options by falling back to default list
+    FinalOptions = merge(Options, ?DEFAULT_OPTIONS),
+    {ok, #state{options = FinalOptions}}.
 
 -spec handle_call(Request :: any(), from(), state()) ->
-                                  {reply, Reply :: any(), state()} |
-                                  {reply, Reply :: any(), state(), timeout()} |
-                                  {noreply, state()} |
-                                  {noreply, state(), timeout()} |
                                   {stop, Reason :: any(), Reply :: any(), state()} |
                                   {stop, Reason :: any(), state()}.
+
+handle_call(finish, _From, #state{options = Options} = State) ->
+    % Format the trace data and write to file
+    % TODO: Implement this
+
+    {reply, ok, State};
 
 handle_call(_Request, _From, State) ->
     Reply = ok,
@@ -125,3 +135,12 @@ handle_trace_message({trace, Pid, gc_minor_end, Info}, State) -> State;
 handle_trace_message({trace, Pid, gc_major_start, Info}, State) -> State;
 handle_trace_message({trace, Pid, gc_major_end, Info}, State) -> State;
 handle_trace_message(_TraceMessage, State) -> State.
+
+% https://stackoverflow.com/questions/21873644/combine-merge-two-erlang-lists
+merge(In1, In2) ->
+    Combined = In1 ++ In2,
+    Fun = fun(Key) ->
+                  [FinalValue|_] = proplists:get_all_values(Key, Combined),
+                  {Key, FinalValue}
+          end,
+    lists:map(Fun, proplists:get_keys(Combined)).

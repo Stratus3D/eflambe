@@ -83,5 +83,5 @@ end_per_testcase(_TestCase, _Config) ->
 %%%===================================================================
 
 start_link(_Config) ->
-    {ok, Pid} = eflambe_tracer:start_link(),
+    {ok, Pid} = eflambe_tracer:start_link([]),
     true = is_pid(Pid).
