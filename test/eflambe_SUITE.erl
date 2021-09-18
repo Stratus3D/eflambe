@@ -23,14 +23,16 @@
 
 %% test cases
 -export([
-         %% TODO: test case names go here
+         apply/1,
+         capture/1
         ]).
 
 -include_lib("common_test/include/ct.hrl").
 
 all() ->
     [
-     %% TODO: Group names here e.g. {group, crud}
+     apply,
+     capture
     ].
 
 suite() ->
@@ -81,4 +83,18 @@ end_per_testcase(_TestCase, _Config) ->
 %%% Individual Test Cases (from groups() definition)
 %%%===================================================================
 
+capture(_Config) ->
+    % capture/3
+    ok.
 
+apply(_Config) ->
+    Options = [],
+
+    % Shouldn't crash when invoked
+    eflambe:apply({arithmetic, multiply, [2,3]}, 1, Options),
+
+    % Should behave the same when run a second time
+    eflambe:apply({arithmetic, multiply, [2,3]}, 1, Options),
+
+    application:stop(eflambe),
+    ok.
