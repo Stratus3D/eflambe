@@ -80,22 +80,29 @@ handle_call({start_trace, Id, MaxCalls, Options}, _From, State) ->
         undefined ->
             % Create new trace, spawn a tracer for the trace
             {ok, TracerPid} = eflambe_tracer:start_link(),
-            NewState = put_trace(State, #trace{id = Id, max_calls = MaxCalls, calls = 0, options = Options, running = true, tracer = TracerPid}),
-            {reply, {ok, Id, true, TracerPid}, NewState};
-        #trace{max_calls = MaxCalls, calls = Calls, options = Options, running = false, tracer = TracerPid} = Trace ->
+            UpdatedTrace = #trace{
+                              id = Id,
+                              max_calls = MaxCalls,
+                              calls = 0,
+                              options = Options,
+                              running = true,
+                              tracer = TracerPid
+                             },
+            {reply, {ok, Id, true, TracerPid}, put_trace(State, UpdatedTrace)};
+        #trace{max_calls = MaxCalls, calls = Calls, running = false} = Trace
+          when Calls + 1 =:= MaxCalls ->
+            % End trace
+            NewCalls = Calls + 1,
+            NewState = update_trace(State, Id, Trace#trace{calls = NewCalls, running = true}),
+            {reply, {end_trace, Id, NewCalls, Options}, NewState};
+        #trace{max_calls = MaxCalls, calls = Calls, running = false} = Trace ->
+            #trace{tracer = TracerPid} = Trace,
             % Increment existing trace
             NewCalls = Calls + 1,
-            case NewCalls =:= MaxCalls of
-                true ->
-                    % End trace
-                    NewState = update_trace(State, Id, Trace#trace{calls = NewCalls, running = true}),
-                    {reply, {end_trace, Id, NewCalls, Options}, NewState};
-                false ->
-                    % Update number of calls
-                    NewState = update_trace(State, Id, Trace#trace{calls = NewCalls, running = true}),
-                    {reply, {ok, Id, true, TracerPid}, NewState}
-            end;
-        #trace{max_calls = MaxCalls, options = Options, running = true, tracer = TracerPid} ->
+            % Update number of calls
+            NewState = update_trace(State, Id, Trace#trace{calls = NewCalls, running = true}),
+            {reply, {ok, Id, true, TracerPid}, NewState};
+        #trace{options = Options, running = true, tracer = TracerPid} ->
             {reply, {ok, Id, false, TracerPid}, State}
     end;
 
@@ -127,7 +134,7 @@ handle_cast(_Msg, State) ->
                                   {stop, Reason :: any(), state()}.
 
 handle_info(Info, State) ->
-    logger:error("Received unexpected info message: ~w",[Info]),
+    logger:error("Received unexpected info message: ~w", [Info]),
     {noreply, State}.
 
 -spec terminate(Reason :: any(), state()) -> any().

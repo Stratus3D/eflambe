@@ -81,7 +81,7 @@ handle_info(TraceMessage, State) when element(1, TraceMessage) == trace ->
     {noreply, NewState};
 
 handle_info(Info, State) ->
-    logger:error("Received unexpected info message: ~w",[Info]),
+    logger:error("Received unexpected info message: ~w", [Info]),
     {noreply, State}.
 
 -spec terminate(Reason :: any(), state()) -> any().
