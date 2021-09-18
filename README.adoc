@@ -1,5 +1,3 @@
-= E flambè
-
 image::doc/eflambe-torch-logo.png[E flambè, a tool for rapid profiling of Erlang and Elixir applications]
 
 * Designed for rapid generation of flamegraphs - no need to edit source code or recompile!
@@ -46,6 +44,17 @@ Add the following line to your `rebar.config` file:
 === Output Formats
 
 == Example Outputs
+
+== Implementation
+
+While designing this tool there were several different approaches I considered. Because I wanted the user to be able to dynamically select functions to profile at runtime, I'd need to start tracing any process that invoked the selected function. Unfortunately it's hard to turn tracing on at an exact point in time for a specific process. All the existing tracing libraries do not support this. An ideal implementation would have been an `erl_tracer` behavior that blocked execution when the selected function was invoked for just long enough to start a trace of all the internal function calls. But unfortunately this wasn't possible due to the fact that `erl_tracer` callbacks must be NIFs and NIFs cannot call Erlang functions directly. There are some hacky ways to get around this, but it didn't feel like a good solution.
+
+The solution I settled on is unfortunately no less hacky but is a bit more straightforward. Instead of trying to halt execution at a specific point in time, we use meck to create a mock of the module containing the function the user wants to profile with the passthrough option enabled. This results in a new module that 
+
+Heavily inspired by:
+
+* https://github.com/proger/eflame
+* https://github.com/ebegumisa/flame_prof
 
 == Contributing
 
