@@ -28,8 +28,6 @@
 
 -include_lib("common_test/include/ct.hrl").
 
--define(PROPTEST(M,F), true = proper:quickcheck(M:F())).
-
 all() ->
     [
      %% TODO: Group names here e.g. {group, crud}
