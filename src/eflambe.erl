@@ -64,22 +64,20 @@ capture({Module, Function, Arity}, NumCalls, Options) ->
 %% @end
 %%--------------------------------------------------------------------
 
--spec apply(Function :: mfa_fun()) -> ok.
+-spec apply(Function :: mfa_fun()) -> any().
 
 apply(Function) ->
     ?MODULE:apply(Function, 1).
 
--spec apply(Function :: mfa_fun(), NumCalls :: integer()) -> ok.
+-spec apply(Function :: mfa_fun(), NumCalls :: integer()) -> any().
 
 apply(Function, NumCalls) ->
     ?MODULE:apply(Function, NumCalls, []).
 
--spec apply(Function :: mfa_fun(), NumCalls :: integer(), Options :: list()) -> ok.
+-spec apply(Function :: mfa_fun(), NumCalls :: integer(), Options :: list()) -> any().
 
 apply({Module, Function, Args}, NumCalls, Options) ->
-    % Unique identifer for the `NumCalls` number of traces for `Function`
-    TraceId = {Module, Function, length(Args)},
-
+    TraceId = make_ref(),
     Trace = start_trace(TraceId, NumCalls, Options),
 
     % Invoke the original function
@@ -89,7 +87,8 @@ apply({Module, Function, Args}, NumCalls, Options) ->
     Results;
 
 apply({Function, Args}, NumCalls, Options) ->
-    Trace = start_trace(Function, NumCalls, Options),
+    TraceId = make_ref(),
+    Trace = start_trace(TraceId, NumCalls, Options),
 
     % Invoke the original function
     Results = erlang:apply(Function, Args),
