@@ -94,18 +94,18 @@ start_trace(_Config) ->
     % Returns an ok tuple when eflambe_server is running and arguments are valid
     {ok, _Pid} = eflambe_server:start_link(),
     {state,[]} = get_gen_server_state(eflambe_server),
-    {ok, foobar} = eflambe_server:start_trace(foobar, 1, []),
+    {ok, foobar, true, TracerPid} = eflambe_server:start_trace(foobar, 1, []),
 
     % Stores trace state
-    {state,[{trace,foobar,1,0,true,[]}]} = get_gen_server_state(eflambe_server),
+    {state,[{trace,foobar,1,0,true,TracerPid,[]}]} = get_gen_server_state(eflambe_server),
 
     % Returns the same trace data when called twice
-    {ok, foobar} = eflambe_server:start_trace(foobar, 1, []),
+    {ok, foobar, false, _TracerPid} = eflambe_server:start_trace(foobar, 1, []),
 
     % Returns end_trace when max number of calls is reached
-    {ok, foobar, 0, []} = eflambe_server:stop_trace(foobar),
+    {ok, foobar, 0, true, []} = eflambe_server:stop_trace(foobar),
     {end_trace,foobar,1,[]} = eflambe_server:start_trace(foobar, 1, []),
-    {state,[{trace,foobar,1,1,true,[]}]} = get_gen_server_state(eflambe_server).
+    {state,[{trace,foobar,1,1,true,TracerPid,[]}]} = get_gen_server_state(eflambe_server).
 
 stop_trace(_Config) ->
     % Returns an error when eflambe_server isn't running
@@ -116,11 +116,11 @@ stop_trace(_Config) ->
     {error, unknown_trace} = eflambe_server:stop_trace(foobar),
 
     % Returns an ok tuple when eflambe_server is running and arguments are valid
-    {ok, foobar} = eflambe_server:start_trace(foobar, 1, []),
-    {ok,foobar,0,[]} = eflambe_server:stop_trace(foobar),
+    {ok, foobar, true, TracerPid} = eflambe_server:start_trace(foobar, 1, []),
+    {ok,foobar,0,true,[]} = eflambe_server:stop_trace(foobar),
 
     % Updates trace state on the server
-    {state,[{trace,foobar,1,0,false,[]}]} = get_gen_server_state(eflambe_server).
+    {state,[{trace,foobar,1,0,false,TracerPid,[]}]} = get_gen_server_state(eflambe_server).
 
 get_gen_server_state(Name) ->
     {status, _, _, State} = sys:get_status(Name),

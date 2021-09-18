@@ -30,6 +30,7 @@
           max_calls :: integer(),
           calls :: integer(),
           running = false :: boolean(),
+          tracer :: pid(),
           options = [] :: list()
          }).
 
@@ -71,18 +72,17 @@ init([]) ->
 -spec handle_call(Request :: any(), from(), state()) ->
                                   {reply, Reply :: any(), state()} |
                                   {reply, Reply :: any(), state(), timeout()} |
-                                  {noreply, state()} |
-                                  {noreply, state(), timeout()} |
                                   {stop, Reason :: any(), Reply :: any(), state()} |
                                   {stop, Reason :: any(), state()}.
 
 handle_call({start_trace, Id, MaxCalls, Options}, _From, State) ->
     case get_trace_by_id(State, Id) of
         undefined ->
-            % Create new trace
-            NewState = put_trace(State, #trace{id = Id, max_calls = MaxCalls, calls = 0, options = Options, running = true}),
-            {reply, {ok, Id}, NewState};
-        #trace{max_calls = MaxCalls, calls = Calls, options = Options, running = false} = Trace ->
+            % Create new trace, spawn a tracer for the trace
+            {ok, TracerPid} = eflambe_tracer:start_link(),
+            NewState = put_trace(State, #trace{id = Id, max_calls = MaxCalls, calls = 0, options = Options, running = true, tracer = TracerPid}),
+            {reply, {ok, Id, true, TracerPid}, NewState};
+        #trace{max_calls = MaxCalls, calls = Calls, options = Options, running = false, tracer = TracerPid} = Trace ->
             % Increment existing trace
             NewCalls = Calls + 1,
             case NewCalls =:= MaxCalls of
@@ -93,10 +93,10 @@ handle_call({start_trace, Id, MaxCalls, Options}, _From, State) ->
                 false ->
                     % Update number of calls
                     NewState = update_trace(State, Id, Trace#trace{calls = NewCalls, running = true}),
-                    {reply, {ok, Id}, NewState}
+                    {reply, {ok, Id, true, TracerPid}, NewState}
             end;
-        #trace{max_calls = MaxCalls, options = Options, running = true} ->
-            {reply, {ok, Id}, State}
+        #trace{max_calls = MaxCalls, options = Options, running = true, tracer = TracerPid} ->
+            {reply, {ok, Id, false, TracerPid}, State}
     end;
 
 handle_call({stop_trace, Id}, _From, State) ->
@@ -105,10 +105,10 @@ handle_call({stop_trace, Id}, _From, State) ->
             {reply, {error, unknown_trace}, State};
         #trace{calls = Calls, options = Options, running = true} = Trace ->
             NewState = update_trace(State, Id, Trace#trace{running = false}),
-            Reply = {ok, Id, Calls, Options},
+            Reply = {ok, Id, Calls, true, Options},
             {reply, Reply, NewState};
         #trace{calls = Calls, options = Options, running = false} ->
-            {reply, {ok, Id, Calls, Options}, State}
+            {reply, {ok, Id, Calls, false, Options}, State}
     end;
 
 handle_call(_Request, _From, State) ->
