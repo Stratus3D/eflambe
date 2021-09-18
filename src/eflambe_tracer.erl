@@ -67,7 +67,7 @@ handle_call(finish, _From, #state{options = Options} = State) ->
     % Format the trace data and write to file
     % TODO: Implement this
 
-    {reply, ok, State};
+    {stop, normal, State};
 
 handle_call(_Request, _From, State) ->
     Reply = ok,

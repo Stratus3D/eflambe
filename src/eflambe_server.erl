@@ -79,7 +79,7 @@ handle_call({start_trace, Id, CallLimit, Options}, _From, State) ->
     case get_trace_by_id(State, Id) of
         undefined ->
             % Create new trace, spawn a tracer for the trace
-            {ok, TracerPid} = eflambe_tracer:start_link(),
+            {ok, TracerPid} = eflambe_tracer:start_link(Options),
             UpdatedTrace = #trace{
                               id = Id,
                               max_calls = CallLimit,
