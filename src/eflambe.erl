@@ -13,6 +13,9 @@
 
 -type mfa_fun() :: {atom(), atom(), list()} | fun().
 
+-type option() :: {output_directory, binary()} | {output_format, binary()} | {open, atom()}.
+-type options() :: [option()].
+
 -define(FLAGS, [call, return_to, running, procs, garbage_collection, arity,
                 timestamp, set_on_spawn]).
 
@@ -35,7 +38,7 @@ capture(MFA) ->
 capture(MFA, NumCalls) ->
     capture(MFA, NumCalls, []).
 
--spec capture(MFA :: mfa(), NumCalls :: integer(), Options :: list()) -> ok.
+-spec capture(MFA :: mfa(), NumCalls :: integer(), Options :: options()) -> ok.
 
 capture({Module, Function, Arity}, NumCalls, Options) ->
     ok = meck:new(Module, [unstick, passthrough]),
@@ -79,7 +82,7 @@ apply(Function) ->
 apply(Function, NumCalls) ->
     ?MODULE:apply(Function, NumCalls, []).
 
--spec apply(Function :: mfa_fun(), NumCalls :: integer(), Options :: list()) -> any().
+-spec apply(Function :: mfa_fun(), NumCalls :: integer(), Options :: options()) -> any().
 
 apply({Module, Function, Args}, NumCalls, Options) ->
     TraceId = make_ref(),
