@@ -8,6 +8,15 @@
 
 %%--------------------------------------------------------------------
 %% @doc
+%% This callback exists to inform the tracer of the file extension that should
+%% be used for the output filename it will generate.
+%%
+%% @end
+%%--------------------------------------------------------------------
+-callback extension() -> {ok, binary()}.
+
+%%--------------------------------------------------------------------
+%% @doc
 %% This callback exists so the implementation can initialize its own internal
 %% state. This may be useful for opening files, etc...
 %%
