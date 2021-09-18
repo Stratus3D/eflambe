@@ -13,6 +13,8 @@
 
 -type mfa_fun() :: {atom(), atom(), list()} | fun().
 
+-define(FLAGS, [call, return_to, running, procs, garbage_collection, arity, timestamp, set_on_spawn]).
+
 %%--------------------------------------------------------------------
 %% @doc
 %% Starts capturing of function call data for any invocation of the specified
@@ -103,14 +105,36 @@ apply({Function, Args}, NumCalls, Options) ->
 -spec start_trace(TraceId :: any(), NumCalls :: integer(), Options :: list()) -> ok.
 
 start_trace(TraceId, NumCalls, Options) ->
-    % TODO: Implement this function, this function should return some sort of trace ID
-    ok.
+    % TODO: Figure if I can move this application start code elsewhere
+    application:ensure_all_started(eflambe),
+    eflambe_sup:get_or_start_server(),
 
--spec stop_trace(any()) -> any().
+    case eflambe_server:start_trace(TraceId, NumCalls, Options) of
+        {ok, TraceId, true, Tracer} ->
+            % TODO: Clean up this code
+            MatchSpec = [{'_', [], [{message, {{cp, {caller}}}}]}],
+            erlang:trace_pattern(on_load, MatchSpec, [local]),
+            erlang:trace_pattern({'_', '_', '_'}, MatchSpec, [local]),
+            erlang:trace(self(), true, [{tracer, Tracer} | ?FLAGS]);
+        {ok, TraceId, false, _Tracer} ->
+            % Trace is already running. This must be a recursive function call.
+            % We do not need to do anything.
+            ok
+    end,
 
-stop_trace(_Trace) ->
-    % TODO: Implement this function
-    ok.
+    TraceId.
+
+-spec stop_trace(any()) -> ok.
+
+stop_trace(Trace) ->
+    case eflambe_server:stop_trace(Trace) of
+        {error,  unknown_trace} -> ok;
+        {ok, Id, Calls, false, Options} -> ok;
+        {ok, Id, Calls, true, Options} ->
+            % Stop trace
+            % TODO: Improve boolean values returned from eflambe_server
+            erlang:trace(self(), false, [all])
+    end.
 
 % Total hack
 % TODO: Is there a way to programmatically generate a function of a given arity?

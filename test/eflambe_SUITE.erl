@@ -84,8 +84,19 @@ end_per_testcase(_TestCase, _Config) ->
 %%%===================================================================
 
 capture(_Config) ->
-    % capture/3
-    ok.
+    Options = [],
+
+    % Shouldn't crash when invoked
+    eflambe:capture({arithmetic, multiply, 2}, 1, Options),
+
+    12 = arithmetic:multiply(4,3),
+
+    % Should behave the same when run a second time
+    eflambe:capture({arithmetic, multiply, 2}, 1, Options),
+
+    12 = arithmetic:multiply(4,3),
+
+    ok = application:stop(eflambe).
 
 apply(_Config) ->
     Options = [],
@@ -96,5 +107,4 @@ apply(_Config) ->
     % Should behave the same when run a second time
     eflambe:apply({arithmetic, multiply, [2,3]}, 1, Options),
 
-    application:stop(eflambe),
-    ok.
+    ok = application:stop(eflambe).
