@@ -144,6 +144,8 @@ stop_trace(Trace) ->
 
 % Total hack
 % TODO: Is there a way to programmatically generate a function of a given arity?
+% I asked here:
+% https://stackoverflow.com/questions/69244814/erlang-generate-anonymous-function-of-an-arbitary-arity
 mock_fun(1, Function) ->
     fun(A) -> Function([A]) end;
 mock_fun(2, Function) ->
