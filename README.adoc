@@ -25,7 +25,7 @@ Add the following line to your `mix.exs` file and then run `mix deps.get`:
 
 [source, elixir]
 ----
-{:eflambe, "~> 0.2.0"}
+{:eflambe, "~> 0.2.1"}
 ----
 
 === Erlang
@@ -34,7 +34,7 @@ Add the following line to your `rebar.config` file and then run `rebar3 get-deps
 
 [source, erlang]
 ----
-{eflambe, "0.2.0"}
+{eflambe, "0.2.1"}
 ----
 
 == Usage
