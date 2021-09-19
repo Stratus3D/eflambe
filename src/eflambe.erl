@@ -42,12 +42,10 @@ capture(MFA, NumCalls) ->
 
 capture({Module, Function, Arity}, NumCalls, Options) ->
     ok = meck:new(Module, [unstick, passthrough]),
-
-    % Unique identifer for the `NumCalls` number of traces for `Function`
-    CaptureRef = make_ref(),
+    TraceId = setup_for_trace(),
 
     ShimmedFunction = fun(Args) ->
-        Trace = start_trace(CaptureRef, NumCalls, [{meck, Module}|Options]),
+        Trace = start_trace(TraceId, NumCalls, [{meck, Module}|Options]),
 
         % Invoke the original function
         Results = meck:passthrough(Args),
@@ -79,7 +77,7 @@ apply(Function) ->
 -spec apply(Function :: mfa_fun(), Options :: options()) -> any().
 
 apply({Module, Function, Args}, Options) ->
-    TraceId = make_ref(),
+    TraceId = setup_for_trace(),
     Trace = start_trace(TraceId, 1, Options),
 
     % Invoke the original function
@@ -89,7 +87,7 @@ apply({Module, Function, Args}, Options) ->
     Results;
 
 apply({Function, Args}, Options) ->
-    TraceId = make_ref(),
+    TraceId = setup_for_trace(),
     Trace = start_trace(TraceId, 1, Options),
 
     % Invoke the original function
@@ -105,10 +103,6 @@ apply({Function, Args}, Options) ->
 -spec start_trace(TraceId :: any(), NumCalls :: integer(), Options :: list()) -> reference().
 
 start_trace(TraceId, NumCalls, Options) ->
-    % TODO: Figure if I can move this application start code elsewhere
-    application:ensure_all_started(eflambe),
-    eflambe_sup:get_or_start_server(),
-
     case eflambe_server:start_trace(TraceId, NumCalls, Options) of
         {ok, TraceId, true, Tracer} ->
             MatchSpec = [{'_', [], [{message, {{cp, {caller}}}}]}],
@@ -129,6 +123,13 @@ stop_trace(Trace) ->
     erlang:trace(self(), false, [all]),
     {ok, _} = eflambe_server:stop_trace(Trace),
     ok.
+
+setup_for_trace() ->
+    application:ensure_all_started(eflambe),
+    eflambe_sup:get_or_start_server(),
+
+    % All traces must have a unique ref so we can keep track of them
+    make_ref().
 
 % Total hack
 % TODO: Is there a way to programmatically generate a function of a given arity?
