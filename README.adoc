@@ -5,9 +5,9 @@ image::doc/eflambe-torch-logo.png[E flambè, a tool for rapid profiling of Erlan
 * Interface inspired by recon_trace to automatically stop flamegraph generation
 * Can automatically open data your flamegraph viewer of choice
 
-== Example Output
+== Output Viewed in Speedscope
 
-<insert screenshot of speedscope>
+image::doc/screenshot-speedscope.png[Speedscope screenshot]
 
 == Description
 
