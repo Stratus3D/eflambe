@@ -1,10 +1,7 @@
 %%%-------------------------------------------------------------------
-%%% @author trevor
-%%% @copyright (C) 2021, trevor
 %%% @doc
 %%%
 %%% @end
-%%% Created : 2021-09-17 21:07:41.807632
 %%%-------------------------------------------------------------------
 -module(eflambe_SUITE).
 
@@ -79,7 +76,7 @@ end_per_testcase(_TestCase, _Config) ->
 %%%===================================================================
 
 capture(_Config) ->
-    Options = [],
+    Options = [{output_format, plain}],
 
     % Shouldn't crash when invoked
     eflambe:capture({arithmetic, multiply, 2}, 1, Options),
@@ -94,7 +91,7 @@ capture(_Config) ->
     ok = application:stop(eflambe).
 
 apply(_Config) ->
-    Options = [],
+    Options = [{output_format, plain}],
 
     % Shouldn't crash when invoked
     eflambe:apply({arithmetic, multiply, [2,3]}, 1, Options),

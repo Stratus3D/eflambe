@@ -1,10 +1,7 @@
 %%%-------------------------------------------------------------------
-%%% @author trevor
-%%% @copyright (C) 2021, trevor
 %%% @doc
 %%%
 %%% @end
-%%% Created : 2021-09-17 20:11:17.715138
 %%%-------------------------------------------------------------------
 -module(eflambe_tracer_SUITE).
 
@@ -77,5 +74,7 @@ end_per_testcase(_TestCase, _Config) ->
 %%%===================================================================
 
 start_link(_Config) ->
-    {ok, Pid} = eflambe_tracer:start_link([]),
+    Options = [{output_format, plain}],
+
+    {ok, Pid} = eflambe_tracer:start_link(Options),
     true = is_pid(Pid).
