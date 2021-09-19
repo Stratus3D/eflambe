@@ -3,7 +3,7 @@ image::doc/eflambe-torch-logo.png[E flambè, a tool for rapid profiling of Erlan
 * Designed for rapid generation of flamegraphs - no need to edit source code or recompile!
 * Generates output in several common formats - perf and Brendan Gregg's
 * Interface inspired by recon_trace to automatically stop flamegraph generation
-* Can automatically open data your flamegraph viewer of choice
+* Can automatically open data in your flamegraph viewer of choice
 
 == Output Viewed in Speedscope
 
@@ -41,11 +41,11 @@ Add the following line to your `rebar.config` file and then run `rebar3 get-deps
 
 == Usage
 
-There two ways to profile code. You can either invoke the code directly using `eflambe:apply/1,2` or you can "capture" trace data from a function when it is invoked while your application is running with `eflambe:capture/1,2,3`.
+There are two ways to profile code with eflambè. You can either invoke the code directly using `eflambe:apply/1,2` or you can "capture" trace data from a function when it is invoked while your application is running with `eflambe:capture/1,2,3`.
 
 === `eflambe:capture/3`
 
-This is useful when you want to profile an function as it is invoked normally inside of an application.
+This is useful when you want to profile a function as it is invoked normally inside of an application.
 
 [source, erlang]
 ----
@@ -79,8 +79,6 @@ ok
 ----
 
 === Options
-
-All of these options are optional. All of them have reasonable defaults.
 
 * `{output_directory, Dir}` - Specify the output directory to write trace data to. Default is project root, and relative paths are relative to the project root.
 * `{output_format, Format}` - Specify the output format. Unfortunately I was not able to implement all the formatters I would have liked to during Spawnfest. Currently only the `brendan_gregg` formatter is available. +++<del>+++`Format` must be one of `perf`, `brendan_gregg`, or `svg`. Default is `brendan_gregg`.+++</del>+++
