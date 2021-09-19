@@ -97,6 +97,7 @@ handle_call(finish, _From, #state{impl = Impl, impl_state = ImplState, options =
 
     % Open flamegraph viewer if specified
     maybe_open_in_program(Options, Filename),
+    io:format("Output filename: ~s~n", [Filename]),
 
     % The only reason we don't stop here is because this is a call and the
     % linked call would crash as well. This feels kind of wrong so I may revisit

@@ -120,7 +120,9 @@ handle_call({stop_trace, Id}, _From, State) ->
         #trace{id = Id, max_calls = MaxCalls, calls = Calls, options = Options,
                running = Running, tracer = TracerPid} = Trace ->
             case Calls =:= MaxCalls of
-                true -> ok = maybe_unload_meck(Options);
+                true ->
+                    ok = maybe_unload_meck(Options),
+                    io:format("Successful finished trace~n");
                 false -> ok
             end,
 
