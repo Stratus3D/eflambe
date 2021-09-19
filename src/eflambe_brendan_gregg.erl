@@ -47,49 +47,62 @@ init(Filename, Options) ->
 
 % Anytime a call event is received and we have an empty stack push both the caller
 % and the call itself onto the stack
-handle_trace_event({trace_ts, _Pid, call, MFA, {cp, CallerMFA}, Timestamp}, #state{stack = []} = State) ->
-    generate_new_state(State, [MFA, CallerMFA], Timestamp);
+handle_trace_event({trace_ts, _Pid, call, MFA, {cp, CallerMFA}, TS}, #state{stack = []} = State) ->
+    generate_new_state(State, [MFA, CallerMFA], TS);
 
 % If there is no caller and the stack is empty just push the call itself
-handle_trace_event({trace_ts, _Pid, call, MFA, {cp, undefined}, Timestamp}, #state{stack = []} = State) ->
-    generate_new_state(State, [MFA], Timestamp);
+handle_trace_event({trace_ts, _Pid, call, MFA, {cp, undefined}, TS}, #state{stack = []} = State) ->
+    generate_new_state(State, [MFA], TS);
 
 % When the current call is the same call as the one at the top of the stack
 % don't change anything except the timestamp
-handle_trace_event({trace_ts, _Pid, call, MFA, {cp, undefined}, Timestamp}, #state{stack = [MFA|_]} = State) ->
-    generate_new_state(State, [MFA], Timestamp);
+handle_trace_event({trace_ts, _Pid, call, MFA, {cp, undefined}, TS},
+                   #state{stack = [MFA|_]} = State) ->
+    generate_new_state(State, [MFA], TS);
 
 % When the current call is different than the one at the top of the stack push
 % the new call and new timestamp
-handle_trace_event({trace_ts, _Pid, call, MFA, {cp, undefined}, Timestamp}, #state{stack = Stack} = State) ->
-    generate_new_state(State, [MFA|Stack], Timestamp);
+handle_trace_event({trace_ts, _Pid, call, MFA, {cp, undefined}, TS},
+                   #state{stack = Stack} = State) ->
+    generate_new_state(State, [MFA|Stack], TS);
 
 % If a function calls itself we shouldn't push a new call onto the stack.
 % Otherwise we could end up with infinitely tall flamegraphs. We are
 % effectively collapsing multiple recursive calls down into one here
-handle_trace_event({trace_ts, _Pid, call, MFA, {cp, MFA}, Timestamp}, #state{stack = [MFA|Stack]} = State) ->
-    generate_new_state(State, [MFA|Stack], Timestamp);
+handle_trace_event({trace_ts, _Pid, call, MFA, {cp, MFA}, TS},
+                   #state{stack = [MFA|Stack]} = State) ->
+    generate_new_state(State, [MFA|Stack], TS);
 
 % Handle the case of a normal call with the calling function already on the stack
-handle_trace_event({trace_ts, _Pid, call, MFA, {cp, CallingMFA}, Timestamp}, #state{stack = [CallingMFA|Stack]} = State) ->
-    generate_new_state(State, [MFA, CallingMFA|Stack], Timestamp);
+handle_trace_event({trace_ts, _Pid, call, MFA, {cp, CallingMFA}, TS},
+                   #state{stack = [CallingMFA|Stack]} = State) ->
+    generate_new_state(State, [MFA, CallingMFA|Stack], TS);
 
 % Must have been a call from a function that is not at the top of the stack.
 % Move up one level and look for a match.
-handle_trace_event({trace_ts, Pid, call, _MFA, {cp, _CallingMFA}, _} = Trace, #state{stack = [_|StackRest]} = State) ->
+handle_trace_event({trace_ts, _Pid, call, _MFA, {cp, _CallingMFA}, _} = Trace,
+                   #state{stack = [_|StackRest]} = State) ->
     handle_trace_event(Trace, State#state{stack = StackRest});
 
 % Process asleep
-handle_trace_event({trace_ts, Port, in, _Command0, Timestamp}, #state{stack = [sleep|Stack]} = State) ->
-    generate_new_state(State, [sleep|Stack], Timestamp);
+handle_trace_event({trace_ts, _Pid, in, _Command0, TS}, #state{stack = [sleep|Stack]} = State) ->
+    generate_new_state(State, [sleep|Stack], TS);
 
 % Process is scheduled in, only change timestamp
-handle_trace_event({trace_ts, Port, in, _Command0, Timestamp}, #state{stack = Stack} = State) ->
-    generate_new_state(State, Stack, Timestamp);
+handle_trace_event({trace_ts, _Pid, in, _Command0, TS}, #state{stack = Stack} = State) ->
+    generate_new_state(State, Stack, TS);
 
 % Process starts to sleep
-handle_trace_event({trace_ts, Port, out, _Command0, Timestamp}, #state{stack = Stack} = State) ->
-    generate_new_state(State, [sleep|Stack], Timestamp);
+handle_trace_event({trace_ts, _Pid, out, _Command0, TS}, #state{stack = Stack} = State) ->
+    generate_new_state(State, [sleep|Stack], TS);
+
+% Function returned to a caller higher up on the stack
+handle_trace_event({trace_ts, _Pid, return_to, MFA, TS}, #state{stack=[_Current, MFA|Stack]} = State) ->
+    generate_new_state(State, [MFA|Stack], TS);
+
+% I don't think I need to worry about these traces
+handle_trace_event({trace_ts, _Pid, return_to, _MFA, _TS}, State) ->
+    State;
 
 %handle_trace_event({trace_ts, PidPort, send, Msg, To}, State) -> State;
 %handle_trace_event({trace_ts, PidPort, send_to_non_existing_process, Msg, To}, State) -> State;
@@ -119,7 +132,7 @@ handle_trace_event({trace_ts, Port, out, _Command0, Timestamp}, #state{stack = S
 %handle_trace_event({trace_ts, Pid, gc_major_start, Info}, State) -> State;
 %handle_trace_event({trace_ts, Pid, gc_major_end, Info}, State) -> State;
 
-handle_trace_event(TraceEvent, #state{file = File} = State) ->
+handle_trace_event(TraceEvent, State) ->
     logger:error("Received unexpected trace event: ~w", [TraceEvent]),
     {ok, State}.
 
