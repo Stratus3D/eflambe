@@ -105,7 +105,7 @@ handle_trace_event({trace_ts, _Pid, return_to, MFA, TS}, #state{stack=[_, MFA|St
 %    State;
 
 handle_trace_event(TraceEvent, State) ->
-    logger:error("Received unexpected trace event: ~w", [TraceEvent]),
+    logger:info("Received unexpected trace event: ~w", [TraceEvent]),
     {ok, State}.
 
 %%--------------------------------------------------------------------
