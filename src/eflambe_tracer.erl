@@ -113,7 +113,7 @@ handle_continue(finish, State) ->
 handle_info(TraceMessage, #state{impl = Impl, impl_state = ImplState} = State)
   when element(1, TraceMessage) == trace; element(1, TraceMessage) == trace_ts ->
     {ok, UpdatedImplState} = erlang:apply(Impl, handle_trace_event, [TraceMessage, ImplState]),
-    {noreply, NewState#state{impl_state = UpdatedImplState}};
+    {noreply, State#state{impl_state = UpdatedImplState}};
 
 handle_info(Info, State) ->
     logger:error("Received unexpected info message: ~w", [Info]),

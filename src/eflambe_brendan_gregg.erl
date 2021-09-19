@@ -146,12 +146,12 @@ entry_to_iolist({M, F, A}) ->
 entry_to_iolist(A) when is_atom(A) ->
     [atom_to_binary(A, utf8)].
 
-dump_to_iolist(Pid, #state{accumulator=Acc}) ->
+dump_to_iolist(Pid, #state{accumulator=Accumulator}) ->
     % Collapse multiple matching stacks into a single stack with a count
     CollapsedAcc = lists:foldl(fun
                                (Prev, [{Count, Prev}|Rest]) -> [{Count + 1, Prev}|Rest];
                                (Current, Acc) -> [{1, Current}|Acc]
-                               end, [], lists:reverse(Acc)),
+                               end, [], lists:reverse(Accumulator)),
 
     % Format lines in the Brendan Gregg collapsed stack format
     [format_line(Pid, Stack, Count) || {Count, Stack} <- CollapsedAcc].
