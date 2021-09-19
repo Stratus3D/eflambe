@@ -24,7 +24,8 @@
 -export([
          apply/1,
          capture/1,
-         capture_and_apply_brendan_gregg/1
+         capture_and_apply_brendan_gregg/1,
+         multiple_captures/1
         ]).
 
 -include_lib("common_test/include/ct.hrl").
@@ -33,7 +34,8 @@ all() ->
     [
      apply,
      capture,
-     capture_and_apply_brendan_gregg
+     capture_and_apply_brendan_gregg,
+     multiple_captures
     ].
 
 suite() ->
@@ -107,11 +109,49 @@ apply(_Config) ->
 
 capture_and_apply_brendan_gregg(_Config) ->
     Options = [{output_format, brendan_gregg}],
+    % Count files in dir
+    {ok, Files} = file:list_dir("."),
+    NumFiles = length(Files),
 
     % Both calls should work with the brendan gregg formatter
     eflambe:apply({arithmetic, multiply, [2,3]}, 1, Options),
 
     eflambe:capture({arithmetic, multiply, 2}, 1, Options),
     12 = arithmetic:multiply(4,3),
+
+    % Both write separate trace files
+    {ok, UpdatedFiles} = file:list_dir("."),
+    NewNumFiles = length(UpdatedFiles),
+    NewNumFiles = NumFiles + 2,
+
+    % Assert new files have correct file extension
+    NewFiles = UpdatedFiles -- Files,
+    lists:foreach(fun(Filename) ->
+                          ".bggg" = filename:extension(Filename)
+                  end, NewFiles),
+
+    ok = application:stop(eflambe).
+
+multiple_captures(_Config) ->
+    Options = [{output_format, brendan_gregg}],
+    % Count files in dir
+    {ok, Files} = file:list_dir("."),
+    NumFiles = length(Files),
+
+    % Capturing multiple calls should result in multiple output files
+    eflambe:capture({arithmetic, multiply, 2}, 2, Options),
+    12 = arithmetic:multiply(4,3),
+    20 = arithmetic:multiply(5,4),
+
+    % Both write separate trace files
+    {ok, UpdatedFiles} = file:list_dir("."),
+    NewNumFiles = length(UpdatedFiles),
+    NewNumFiles = NumFiles + 2,
+
+    % Assert new files have correct file extension
+    NewFiles = UpdatedFiles -- Files,
+    lists:foreach(fun(Filename) ->
+                          ".bggg" = filename:extension(Filename)
+                  end, NewFiles),
 
     ok = application:stop(eflambe).
