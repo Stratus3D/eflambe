@@ -31,6 +31,8 @@
 -type state() :: #state{}.
 -type from() :: {pid(), Tag :: term()}.
 
+-type tracer_options() :: [eflambe:option() | {pid, pid()}].
+
 %%%===================================================================
 %%% API
 %%%===================================================================
@@ -41,7 +43,7 @@
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec start_link(eflambe:options()) -> {ok, pid()} | ignore | {error, Error :: any()}.
+-spec start_link(tracer_options()) -> {ok, pid()} | ignore | {error, Error :: any()}.
 
 start_link(Options) ->
     gen_server:start_link(?MODULE, [Options], []).
@@ -53,7 +55,7 @@ finish(Pid) ->
 %%% gen_server callbacks
 %%%===================================================================
 
--spec init(Args :: list()) -> {ok, state()}.
+-spec init(Args :: list(tracer_options())) -> {ok, state()}.
 
 init([Options]) ->
     % Generate complete list of options by falling back to default list

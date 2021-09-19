@@ -73,11 +73,11 @@ init([]) ->
                                   {reply, Reply :: any(), state()} |
                                   {reply, Reply :: any(), state(), timeout()}.
 
-handle_call({start_trace, Id, CallLimit, Options}, _From, State) ->
+handle_call({start_trace, Id, CallLimit, Options}, {FromPid, _}, State) ->
     case get_trace_by_id(State, Id) of
         undefined ->
             % Create new trace, spawn a tracer for the trace
-            {ok, TracerPid} = eflambe_tracer:start_link(Options),
+            {ok, TracerPid} = eflambe_tracer:start_link([{pid, FromPid}|Options]),
             UpdatedTrace = #trace{
                               id = Id,
                               max_calls = CallLimit,
