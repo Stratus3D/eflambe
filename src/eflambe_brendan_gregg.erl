@@ -23,6 +23,8 @@
           useconds = 0 :: integer()
          }).
 
+-define(RESOLUTION, 1).
+
 extension() -> {ok, <<"bggg">>}.
 
 %%--------------------------------------------------------------------
@@ -127,12 +129,21 @@ finalize(Options, #state{filename = Filename} = State) ->
 
 generate_new_state(#state{useconds = 0} = OldState, NewStack, TS) ->
     {ok, OldState#state{useconds=us(TS), stack = NewStack}};
-generate_new_state(#state{accumulator=Acc} = OldState, NewStack, TS) ->
-    %Diff = us(TS) - Micro,
-    % Copy paste
-    StackRev = lists:reverse(NewStack),
-    NewAcc = lists:append([StackRev], Acc),
-    {ok, OldState#state{useconds=us(TS), accumulator=NewAcc, stack=NewStack}}.
+generate_new_state(#state{useconds=Useconds, accumulator=Acc} = OldState, NewStack, TS) ->
+    UsTs = us(TS),
+    Diff = UsTs - Useconds,
+    NOverlaps = Diff div ?RESOLUTION,
+    Overlapped = NOverlaps * ?RESOLUTION,
+    case NOverlaps of
+        X when X >= 1 ->
+            StackRev = lists:reverse(NewStack),
+            % This is hacky
+            Stacks = [StackRev || _ <- lists:seq(1, NOverlaps)],
+            NewAcc = lists:append(Stacks, Acc),
+            {ok, OldState#state{useconds=Useconds+Overlapped, accumulator=NewAcc, stack=NewStack}};
+        _ ->
+            {ok, OldState#state{stack=NewStack}}
+    end.
 
 us({Mega, Secs, Micro}) ->
     Mega*1000*1000*1000*1000 + Secs*1000*1000 + Micro.
@@ -150,7 +161,7 @@ dump_to_iolist(Pid, #state{accumulator=Accumulator}) ->
     CollapsedAcc = lists:foldl(fun
                                (Prev, [{Count, Prev}|Rest]) -> [{Count + 1, Prev}|Rest];
                                (Current, Acc) -> [{1, Current}|Acc]
-                               end, [], lists:reverse(Accumulator)),
+                               end, [], Accumulator),
 
     % Format lines in the Brendan Gregg collapsed stack format
     [format_line(Pid, Stack, Count) || {Count, Stack} <- CollapsedAcc].
