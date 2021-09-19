@@ -1,6 +1,8 @@
 %%%-------------------------------------------------------------------
 %%% @doc
-%%%
+%%% This module defines a tracer process implemented as a gen_server. This
+%%% gen_server is only intended to be used by the eflambe_server to receive
+%%% trace messages and write them to the appropriate formatter module.
 %%% @end
 %%%-------------------------------------------------------------------
 -module(eflambe_tracer).
@@ -73,9 +75,10 @@ init([Options]) ->
     % Generate output filename
     {ok, Ext} = erlang:apply(Impl, extension, []),
     Filename = generate_filename(Ext),
+    FullFilename = filename:join([output_directory(Options), Filename]),
 
     % Initialize implementation state
-    {ok, State} = erlang:apply(Impl, init, [Filename, Options]),
+    {ok, State} = erlang:apply(Impl, init, [FullFilename, Options]),
     {ok, #state{impl = Impl, impl_state = State, options = FinalOptions}}.
 
 -spec handle_call(Request :: any(), from(), state()) ->
@@ -144,3 +147,6 @@ timestamp_integer() ->
 generate_filename(Ext) ->
     Name = io_lib:format("~B-~s.~s", [timestamp_integer(), <<"eflambe-output">>, Ext]),
     list_to_binary(Name).
+
+output_directory(Options) ->
+    proplists:get_value(output_directory, Options, "./").
