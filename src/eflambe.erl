@@ -43,7 +43,6 @@ capture(MFA, NumCalls) ->
 capture({Module, Function, Arity}, NumCalls, Options) ->
     ok = meck:new(Module, [unstick, passthrough]),
 
-
     % Unique identifer for the `NumCalls` number of traces for `Function`
     CaptureRef = make_ref(),
 

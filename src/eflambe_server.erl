@@ -74,10 +74,11 @@ init([]) ->
                                   {reply, Reply :: any(), state(), timeout()}.
 
 handle_call({start_trace, Id, CallLimit, Options}, {FromPid, _}, State) ->
+    TracerOptions = [{pid, FromPid}|Options],
     case get_trace_by_id(State, Id) of
         undefined ->
             % Create new trace, spawn a tracer for the trace
-            {ok, TracerPid} = eflambe_tracer:start_link([{pid, FromPid}|Options]),
+            {ok, TracerPid} = eflambe_tracer:start_link(TracerOptions),
             UpdatedTrace = #trace{
                               id = Id,
                               max_calls = CallLimit,
@@ -93,11 +94,15 @@ handle_call({start_trace, Id, CallLimit, Options}, {FromPid, _}, State) ->
         #trace{max_calls = MaxCalls, calls = Calls, tracer = TracerPid, running = true}
           when Calls =:= MaxCalls ->
             {reply, {ok, Id, false, TracerPid}, State};
-        #trace{calls = Calls, running = false, tracer = TracerPid} = Trace ->
+        #trace{calls = Calls, running = false} = Trace ->
             % Increment existing trace
             NewCalls = Calls + 1,
+            % Create new trace, spawn a tracer for the trace
+            {ok, TracerPid} = eflambe_tracer:start_link(TracerOptions),
+
             % Update number of calls
-            NewState = update_trace(State, Id, Trace#trace{calls = NewCalls, running = true}),
+            UpdatedTrace = Trace#trace{calls = NewCalls, running = true, tracer = TracerPid},
+            NewState = update_trace(State, Id, UpdatedTrace),
             {reply, {ok, Id, true, TracerPid}, NewState};
         #trace{options = Options, running = true, tracer = TracerPid} ->
             {reply, {ok, Id, false, TracerPid}, State}
@@ -109,16 +114,19 @@ handle_call({stop_trace, Id}, _From, State) ->
             % No trace found
             {reply, {error, unknown_trace}, State};
 
-        #trace{calls = Calls, options = Options, running = true, tracer = TracerPid} = Trace ->
-            % Stop trace
-            case proplists:get_value(meck, Options) of
-                undefined -> ok;
-                ModuleName ->
-                    % Unload if module has been mecked
-                    ok = meck:unload(ModuleName)
-            end,
+        #trace{max_calls = MaxCalls, calls = Calls, options = Options, running = true,
+               tracer = TracerPid} = Trace when Calls =:= MaxCalls ->
+            ok = maybe_unload_meck(Options),
+            eflambe_tracer:finish(TracerPid),
+            NewState = update_trace(State, Id, Trace#trace{running = false}),
+            {reply, {ok, Id, Calls, true, Options}, NewState};
 
-            % Stop tracer
+        #trace{max_calls = MaxCalls, calls = Calls, options = Options, running = false
+              } when Calls =:= MaxCalls ->
+            ok = maybe_unload_meck(Options),
+            {reply, {ok, Id, Calls, false, Options}, State};
+
+        #trace{calls = Calls, options = Options, running = true, tracer = TracerPid} = Trace ->
             eflambe_tracer:finish(TracerPid),
             NewState = update_trace(State, Id, Trace#trace{running = false}),
             {reply, {ok, Id, Calls, true, Options}, NewState};
@@ -173,4 +181,12 @@ lookup_fun(Id) ->
     fun
         (#trace{id = TraceId}) when TraceId =:= Id -> true;
         (_) -> false
+    end.
+
+maybe_unload_meck(Options) ->
+    case proplists:get_value(meck, Options) of
+        undefined -> ok;
+        ModuleName ->
+            % Unload if module has been mecked
+            ok = meck:unload(ModuleName)
     end.
