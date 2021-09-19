@@ -13,7 +13,8 @@
 
 -type mfa_fun() :: {atom(), atom(), list()} | fun().
 
--type option() :: {output_directory, binary()} | {output_format, binary()} | {open, atom()}.
+-type program() :: hotspot | speedscope.
+-type option() :: {output_directory, binary()} | {output_format, binary()} | {open, program()}.
 -type options() :: [option()].
 
 -define(FLAGS, [call, return_to, running, procs, garbage_collection, arity,
