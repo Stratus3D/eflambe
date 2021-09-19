@@ -104,34 +104,6 @@ handle_trace_event({trace_ts, _Pid, return_to, MFA, TS}, #state{stack=[_, MFA|St
 handle_trace_event({trace_ts, _Pid, return_to, _MFA, _TS}, State) ->
     State;
 
-%handle_trace_event({trace_ts, PidPort, send, Msg, To}, State) -> State;
-%handle_trace_event({trace_ts, PidPort, send_to_non_existing_process, Msg, To}, State) -> State;
-%handle_trace_event({trace_ts, PidPort, 'receive', Msg}, State) -> State;
-%handle_trace_event({trace_ts, Pid, return_to, {M, F, Arity}}, State) -> State;
-%handle_trace_event({trace_ts, Pid, return_from, {M, F, Arity}, ReturnValue}, State) -> State;
-%handle_trace_event({trace_ts, Pid, exception_from, {M, F, Arity}, {Class, Value}}, State) -> State;
-%handle_trace_event({trace_ts, Pid, spawn, Pid2, {M, F, Args}}, State) -> State;
-%handle_trace_event({trace_ts, Pid, spawned, Pid2, {M, F, Args}}, State) -> State;
-%handle_trace_event({trace_ts, Pid, exit, Reason}, State) -> State;
-%handle_trace_event({trace_ts, PidPort, register, RegName}, State) -> State;
-%handle_trace_event({trace_ts, PidPort, unregister, RegName}, State) -> State;
-%handle_trace_event({trace_ts, Pid, link, Pid2}, State) -> State;
-%handle_trace_event({trace_ts, Pid, unlink, Pid2}, State) -> State;
-%handle_trace_event({trace_ts, PidPort, getting_linked, Pid2}, State) -> State;
-%handle_trace_event({trace_ts, PidPort, getting_unlinked, Pid2}, State) -> State;
-%handle_trace_event({trace_ts, Port, open, Pid, Driver}, State) -> State;
-%handle_trace_event({trace_ts, Port, closed, Reason}, State) -> State;
-%handle_trace_event({trace_ts, Pid, in, MFA0}, State) -> State;
-%handle_trace_event({trace_ts, Pid, in_exiting, MFA0}, State) -> State;
-%handle_trace_event({trace_ts, Pid, out, MFA0}, State) -> State;
-%handle_trace_event({trace_ts, Pid, out_exiting, MFA0}, State) -> State;
-%handle_trace_event({trace_ts, Pid, out_exited, MFA0}, State) -> State;
-%handle_trace_event({trace_ts, Pid, gc_minor_start, Info}, State) -> State;
-%handle_trace_event({trace_ts, Pid, gc_max_heap_size, Info}, State) -> State;
-%handle_trace_event({trace_ts, Pid, gc_minor_end, Info}, State) -> State;
-%handle_trace_event({trace_ts, Pid, gc_major_start, Info}, State) -> State;
-%handle_trace_event({trace_ts, Pid, gc_major_end, Info}, State) -> State;
-
 handle_trace_event(TraceEvent, State) ->
     logger:error("Received unexpected trace event: ~w", [TraceEvent]),
     {ok, State}.
