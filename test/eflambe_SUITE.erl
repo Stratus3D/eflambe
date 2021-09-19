@@ -39,12 +39,7 @@ suite() ->
     [{ct_hooks,[cth_surefire]}, {timetrap, {seconds, 30}}].
 
 groups() ->
-    [
-        %% TODO: group definitions here e.g.
-        %% {crud, [], [t_create_resource, t_read_resource, t_update_resource,
-        %%     t_delete_resource]}
-
-    ].
+    [].
 
 %%%===================================================================
 %%% Overall setup/teardown
