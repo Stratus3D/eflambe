@@ -100,7 +100,7 @@ start_trace(_Config) ->
     {state,[{trace,foobar,1,1,true,TracerPid,Options}]} = get_gen_server_state(eflambe_server),
 
     % Returns false when trace is stopped but number of calls has already been reached
-    {ok, foobar, 1, true, Options} = eflambe_server:stop_trace(foobar),
+    {ok, true} = eflambe_server:stop_trace(foobar),
     {ok,foobar,false, _TracerPid} = eflambe_server:start_trace(foobar, 1, Options),
 
     {state,[{trace,foobar,1,1,false,TracerPid,Options}]} = get_gen_server_state(eflambe_server).
@@ -117,7 +117,7 @@ stop_trace(_Config) ->
 
     % Returns an ok tuple when eflambe_server is running and arguments are valid
     {ok, foobar, true, TracerPid} = eflambe_server:start_trace(foobar, 1, Options),
-    {ok,foobar,1,true, Options} = eflambe_server:stop_trace(foobar),
+    {ok, true} = eflambe_server:stop_trace(foobar),
 
     % Updates trace state on the server
     {state,[{trace,foobar,1,1,false,TracerPid,Options}]} = get_gen_server_state(eflambe_server).

@@ -132,14 +132,9 @@ start_trace(TraceId, NumCalls, Options) ->
 -spec stop_trace(any()) -> ok.
 
 stop_trace(Trace) ->
-    case eflambe_server:stop_trace(Trace) of
-        {error,  unknown_trace} -> ok;
-        {ok, _Id, _Calls, false, _Options} -> ok;
-        {ok, _Id, _Calls, true, _Options} ->
-            % Stop trace
-            % TODO: Improve boolean values returned from eflambe_server
-            erlang:trace(self(), false, [all])
-    end.
+    erlang:trace(self(), false, [all]),
+    {ok, _} = eflambe_server:stop_trace(Trace),
+    ok.
 
 % Total hack
 % TODO: Is there a way to programmatically generate a function of a given arity?

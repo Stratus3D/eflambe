@@ -53,8 +53,12 @@
 start_link() ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
+-spec start_trace(reference(), integer(), list()) -> {ok, reference(), boolean(), pid()}.
+
 start_trace(Id, MaxCalls, Options) ->
     gen_server:call(?SERVER, {start_trace, Id, MaxCalls, Options}).
+
+-spec stop_trace(reference()) -> {ok, boolean()}.
 
 stop_trace(Id) ->
     gen_server:call(?SERVER, {stop_trace, Id}).
@@ -113,27 +117,22 @@ handle_call({stop_trace, Id}, _From, State) ->
         undefined ->
             % No trace found
             {reply, {error, unknown_trace}, State};
+        #trace{id = Id, max_calls = MaxCalls, calls = Calls, options = Options,
+               running = Running, tracer = TracerPid} = Trace ->
+            case Calls =:= MaxCalls of
+                true -> ok = maybe_unload_meck(Options);
+                false -> ok
+            end,
 
-        #trace{max_calls = MaxCalls, calls = Calls, options = Options, running = true,
-               tracer = TracerPid} = Trace when Calls =:= MaxCalls ->
-            ok = maybe_unload_meck(Options),
-            eflambe_tracer:finish(TracerPid),
+            Changed = case Running of
+                          true ->
+                              ok = eflambe_tracer:finish(TracerPid),
+                              true;
+                          false -> false
+                      end,
+
             NewState = update_trace(State, Id, Trace#trace{running = false}),
-            {reply, {ok, Id, Calls, true, Options}, NewState};
-
-        #trace{max_calls = MaxCalls, calls = Calls, options = Options, running = false
-              } when Calls =:= MaxCalls ->
-            ok = maybe_unload_meck(Options),
-            {reply, {ok, Id, Calls, false, Options}, State};
-
-        #trace{calls = Calls, options = Options, running = true, tracer = TracerPid} = Trace ->
-            eflambe_tracer:finish(TracerPid),
-            NewState = update_trace(State, Id, Trace#trace{running = false}),
-            {reply, {ok, Id, Calls, true, Options}, NewState};
-
-        #trace{calls = Calls, options = Options, running = false} ->
-            % Trace already stopped
-            {reply, {ok, Id, Calls, false, Options}, State}
+            {reply, {ok, Changed}, NewState}
     end;
 
 handle_call(_Request, _From, State) ->

@@ -90,7 +90,7 @@ handle_call(finish, _From, #state{impl = Impl, impl_state = ImplState, options =
     % The only reason we don't stop here is because this is a call and the
     % linked call would crash as well. This feels kind of wrong so I may revisit
     % this
-    {reply, normal, State, {continue, finish}};
+    {reply, ok, State, {continue, finish}};
 
 handle_call(_Request, _From, State) ->
     Reply = ok,
