@@ -127,6 +127,5 @@ stop_trace(_Config) ->
 get_gen_server_state(Name) ->
     {status, _, _, State} = sys:get_status(Name),
     [[_, _, {data, [{"State", ServerState}]}]|_] = lists:reverse(State),
-    io:format("~p~n", [ServerState]),
     ServerState.
 
