@@ -9,6 +9,8 @@ image::doc/eflambe-torch-logo.png[E flambè, a tool for rapid profiling of Erlan
 
 image::doc/screenshot-speedscope.png[Speedscope screenshot]
 
+link:https://youtu.be/fRNdej-UXKQ[Watch a quick demo here]
+
 == Description
 
 This tool is designed to be the first profiling tool you reach for during development. It is designed for rapid visualization of program execution. It generates one or more flamegraphs of any function you specify. You can easily select function(s) to profile in the shell without having to alter your code or restart your application. This tool has two distinct advantages over existing flamegraph generators in Erlang:
