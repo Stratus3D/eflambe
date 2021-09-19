@@ -70,10 +70,11 @@ init([Options]) ->
 
     % Generate output filename
     {ok, Ext} = erlang:apply(Impl, extension, []),
+    % TODO: Add logic to generate a reasonable filename
     Filename = list_to_binary(io_lib:format("~s.~s", [<<"foobar">>, Ext])),
 
     % Initialize implementation state
-    {ok, State} = {ok, []}, % erlang:apply(Impl, init, [Filename, Options]),
+    {ok, State} = erlang:apply(Impl, init, [Filename, Options]),
     {ok, #state{impl = Impl, impl_state = State, options = FinalOptions}}.
 
 -spec handle_call(Request :: any(), from(), state()) ->
@@ -111,7 +112,7 @@ handle_continue(finish, State) ->
 handle_info(TraceMessage, #state{impl = Impl, impl_state = ImplState} = State)
   when element(1, TraceMessage) == trace; element(1, TraceMessage) == trace_ts ->
     NewState = handle_trace_message(TraceMessage, State),
-    {ok, UpdatedImplState} = apply(Impl, handle_trace_event, [TraceMessage, ImplState]),
+    {ok, UpdatedImplState} = erlang:apply(Impl, handle_trace_event, [TraceMessage, ImplState]),
     {noreply, NewState#state{impl_state = UpdatedImplState}};
 
 handle_info(Info, State) ->
