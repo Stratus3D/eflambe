@@ -100,10 +100,10 @@ apply(_Config) ->
     Options = [{output_format, plain}],
 
     % Shouldn't crash when invoked
-    eflambe:apply({arithmetic, multiply, [2,3]}, 1, Options),
+    eflambe:apply({arithmetic, multiply, [2,3]}, Options),
 
     % Should behave the same when run a second time
-    eflambe:apply({arithmetic, multiply, [2,3]}, 1, Options),
+    eflambe:apply({arithmetic, multiply, [2,3]}, Options),
 
     ok = application:stop(eflambe).
 
@@ -114,7 +114,7 @@ capture_and_apply_brendan_gregg(_Config) ->
     NumFiles = length(Files),
 
     % Both calls should work with the brendan gregg formatter
-    eflambe:apply({arithmetic, multiply, [2,3]}, 1, Options),
+    eflambe:apply({arithmetic, multiply, [2,3]}, Options),
 
     eflambe:capture({arithmetic, multiply, 2}, 1, Options),
     12 = arithmetic:multiply(4,3),

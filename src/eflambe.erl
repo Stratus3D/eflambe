@@ -9,7 +9,7 @@
 
 %% Application callbacks
 -export([capture/1, capture/2, capture/3,
-         apply/1, apply/2, apply/3]).
+         apply/1, apply/2]).
 
 -type mfa_fun() :: {atom(), atom(), list()} | fun().
 
@@ -74,18 +74,13 @@ capture({Module, Function, Arity}, NumCalls, Options) ->
 -spec apply(Function :: mfa_fun()) -> any().
 
 apply(Function) ->
-    ?MODULE:apply(Function, 1).
+    ?MODULE:apply(Function, []).
 
--spec apply(Function :: mfa_fun(), NumCalls :: integer()) -> any().
+-spec apply(Function :: mfa_fun(), Options :: options()) -> any().
 
-apply(Function, NumCalls) ->
-    ?MODULE:apply(Function, NumCalls, []).
-
--spec apply(Function :: mfa_fun(), NumCalls :: integer(), Options :: options()) -> any().
-
-apply({Module, Function, Args}, NumCalls, Options) ->
+apply({Module, Function, Args}, Options) ->
     TraceId = make_ref(),
-    Trace = start_trace(TraceId, NumCalls, Options),
+    Trace = start_trace(TraceId, 1, Options),
 
     % Invoke the original function
     Results = erlang:apply(Module, Function, Args),
@@ -93,9 +88,9 @@ apply({Module, Function, Args}, NumCalls, Options) ->
     stop_trace(Trace),
     Results;
 
-apply({Function, Args}, NumCalls, Options) ->
+apply({Function, Args}, Options) ->
     TraceId = make_ref(),
-    Trace = start_trace(TraceId, NumCalls, Options),
+    Trace = start_trace(TraceId, 1, Options),
 
     % Invoke the original function
     Results = erlang:apply(Function, Args),
@@ -116,7 +111,6 @@ start_trace(TraceId, NumCalls, Options) ->
 
     case eflambe_server:start_trace(TraceId, NumCalls, Options) of
         {ok, TraceId, true, Tracer} ->
-            % TODO: Clean up this code
             MatchSpec = [{'_', [], [{message, {{cp, {caller}}}}]}],
             erlang:trace_pattern(on_load, MatchSpec, [local]),
             erlang:trace_pattern({'_', '_', '_'}, MatchSpec, [local]),
