@@ -24,7 +24,7 @@
 -include_lib("kernel/include/logger.hrl").
 
 -define(SERVER, ?MODULE).
--define(DEFAULT_OPTIONS, [{output_format, brendan_greggs}]).
+-define(DEFAULT_OPTIONS, [{output_format, brendan_gregg}]).
 
 -record(state, {impl :: atom(), impl_state :: any(), options :: eflambe:options()}).
 

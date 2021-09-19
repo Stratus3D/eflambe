@@ -1,6 +1,5 @@
 %%%-------------------------------------------------------------------
 %%% @doc
-%%% Writes raw trace messages to file. This output format is for testing.
 %%% Writes trace data to file formatted as Brendan Gregg's collapsed stack
 %%% format.
 %%%
