@@ -21,18 +21,20 @@ This tool is designed to be the first profiling tool you reach for during develo
 
 === Elixir
 
-Add the following line to your `mix.exs` file:
+Add the following line to your `mix.exs` file and then run `mix deps.get`:
 
 [source, elixir]
 ----
+{:eflambe, "~> 0.2.0"}
 ----
 
 === Erlang
 
-Add the following line to your `rebar.config` file:
+Add the following line to your `rebar.config` file and then run `rebar3 get-deps`:
 
 [source, elixir]
 ----
+{eflambe, "0.2.0"}
 ----
 
 == Usage
