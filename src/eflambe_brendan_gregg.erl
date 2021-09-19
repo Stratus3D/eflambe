@@ -99,8 +99,8 @@ handle_trace_event({trace_ts, _Pid, return_to, MFA, TS}, #state{stack=[_, MFA|St
     generate_new_state(State, [MFA|Stack], TS);
 
 % I don't think I need to worry about these traces
-handle_trace_event({trace_ts, _Pid, return_to, _MFA, _TS}, State) ->
-    State;
+%handle_trace_event({trace_ts, _Pid, return_to, _MFA, _TS}, State) ->
+%    State;
 
 handle_trace_event(TraceEvent, State) ->
     logger:error("Received unexpected trace event: ~w", [TraceEvent]),
