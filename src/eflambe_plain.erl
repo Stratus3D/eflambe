@@ -32,8 +32,6 @@ init(Filename, Options) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_trace_event(TraceEvent, #state{file = File} = State) ->
-    % TODO: Remove this when handle_trace_message is sending the data to the output modules
-    io:format("Received Trace Message: ~w~n", [TraceEvent]),
     ok = file:write(File, io_lib:format("~w~n", [TraceEvent])),
     {ok, State}.
 

@@ -70,8 +70,7 @@ init([Options]) ->
 
     % Generate output filename
     {ok, Ext} = erlang:apply(Impl, extension, []),
-    % TODO: Add logic to generate a reasonable filename
-    Filename = list_to_binary(io_lib:format("~s.~s", [<<"foobar">>, Ext])),
+    Filename = generate_filename(Ext),
 
     % Initialize implementation state
     {ok, State} = erlang:apply(Impl, init, [Filename, Options]),
@@ -169,3 +168,11 @@ merge(In1, In2) ->
                   {Key, FinalValue}
           end,
     lists:map(Fun, proplists:get_keys(Combined)).
+
+timestamp_integer() ->
+    {Mega, Secs, Micro} = erlang:timestamp(),
+    Mega*1000*1000*1000*1000 + Secs*1000*1000 + Micro.
+
+generate_filename(Ext) ->
+    Name = io_lib:format("~B-~s.~s", [timestamp_integer(), <<"eflambe-output">>, Ext]),
+    list_to_binary(Name).
