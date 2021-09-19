@@ -1,6 +1,8 @@
 %%%-------------------------------------------------------------------
 %%% @doc
-%%%
+%%% The tests in this file are basic integration tests for the whole library.
+%%% They aren't particularly assertive but they allow me to verify some of the
+%%% happy paths in the code.
 %%% @end
 %%%-------------------------------------------------------------------
 -module(eflambe_SUITE).
@@ -21,7 +23,8 @@
 %% test cases
 -export([
          apply/1,
-         capture/1
+         capture/1,
+         capture_and_apply_brendan_gregg/1
         ]).
 
 -include_lib("common_test/include/ct.hrl").
@@ -29,7 +32,8 @@
 all() ->
     [
      apply,
-     capture
+     capture,
+     capture_and_apply_brendan_gregg
     ].
 
 suite() ->
@@ -98,5 +102,16 @@ apply(_Config) ->
 
     % Should behave the same when run a second time
     eflambe:apply({arithmetic, multiply, [2,3]}, 1, Options),
+
+    ok = application:stop(eflambe).
+
+capture_and_apply_brendan_gregg(_Config) ->
+    Options = [{output_format, brendan_gregg}],
+
+    % Both calls should work with the brendan gregg formatter
+    eflambe:apply({arithmetic, multiply, [2,3]}, 1, Options),
+
+    eflambe:capture({arithmetic, multiply, 2}, 1, Options),
+    12 = arithmetic:multiply(4,3),
 
     ok = application:stop(eflambe).

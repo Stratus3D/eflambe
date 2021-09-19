@@ -62,7 +62,7 @@ init([Options]) ->
     % Select the right implementation module. Provide shorter names for included
     % modules
     Impl = case proplists:get_value(output_format, FinalOptions) of
-               brendan_greggs -> eflambe_brendan_greggs;
+               brendan_gregg -> eflambe_brendan_gregg;
                perf -> eflambe_perf;
                plain -> eflambe_plain;
                Other -> Other
