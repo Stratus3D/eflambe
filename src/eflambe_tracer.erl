@@ -17,6 +17,7 @@
 -export([init/1,
          handle_call/3,
          handle_cast/2,
+         handle_continue/2,
          handle_info/2,
          terminate/2]).
 
@@ -25,7 +26,7 @@
 -define(SERVER, ?MODULE).
 -define(DEFAULT_OPTIONS, [{output_format, brendan_greggs}]).
 
--record(state, {options :: eflambe:options()}).
+-record(state, {impl :: atom(), impl_state :: any(), options :: eflambe:options()}).
 
 -type state() :: #state{}.
 -type from() :: {pid(), Tag :: term()}.
@@ -54,20 +55,40 @@ finish(Pid) ->
 
 -spec init(Args :: list()) -> {ok, state()}.
 
-init(Options) ->
+init([Options]) ->
     % Generate complete list of options by falling back to default list
     FinalOptions = merge(Options, ?DEFAULT_OPTIONS),
-    {ok, #state{options = FinalOptions}}.
+
+    % Select the right implementation module. Provide shorter names for included
+    % modules
+    Impl = case proplists:get_value(output_format, FinalOptions) of
+               brendan_greggs -> eflambe_brendan_greggs;
+               perf -> eflambe_perf;
+               plain -> eflambe_plain;
+               Other -> Other
+           end,
+
+    % Generate output filename
+    {ok, Ext} = erlang:apply(Impl, extension, []),
+    Filename = list_to_binary(io_lib:format("~s.~s", [<<"foobar">>, Ext])),
+
+    % Initialize implementation state
+    {ok, State} = {ok, []}, % erlang:apply(Impl, init, [Filename, Options]),
+    {ok, #state{impl = Impl, impl_state = State, options = FinalOptions}}.
 
 -spec handle_call(Request :: any(), from(), state()) ->
-                                  {stop, Reason :: any(), Reply :: any(), state()} |
-                                  {stop, Reason :: any(), state()}.
+                                  {reply, Reply :: any(), state()} |
+                                  {reply, Reply :: any(), state(), {continue, finish}}.
 
-handle_call(finish, _From, #state{options = Options} = State) ->
+handle_call(finish, _From, #state{impl = Impl, impl_state = ImplState, options = Options
+                                 } = State) ->
     % Format the trace data and write to file
-    % TODO: Implement this
+    {ok, _FinalImplState} = erlang:apply(Impl, finalize, [Options, ImplState]),
 
-    {stop, normal, State};
+    % The only reason we don't stop here is because this is a call and the
+    % linked call would crash as well. This feels kind of wrong so I may revisit
+    % this
+    {reply, normal, State, {continue, finish}};
 
 handle_call(_Request, _From, State) ->
     Reply = ok,
@@ -80,15 +101,18 @@ handle_call(_Request, _From, State) ->
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
+handle_continue(finish, State) ->
+    {stop, normal, State}.
+
 -spec handle_info(Info :: any(), state()) -> {noreply, state()} |
                                   {noreply, state(), timeout()} |
                                   {stop, Reason :: any(), state()}.
 
-handle_info(TraceMessage, State) when element(1, TraceMessage) == trace ->
+handle_info(TraceMessage, #state{impl = Impl, impl_state = ImplState} = State)
+  when element(1, TraceMessage) == trace; element(1, TraceMessage) == trace_ts ->
     NewState = handle_trace_message(TraceMessage, State),
-    % TODO: Remove this when handle_trace_message is sending the data to the output modules
-    io:format("Received Trace Message: ~p~n", [TraceMessage]),
-    {noreply, NewState};
+    {ok, UpdatedImplState} = apply(Impl, handle_trace_event, [TraceMessage, ImplState]),
+    {noreply, NewState#state{impl_state = UpdatedImplState}};
 
 handle_info(Info, State) ->
     logger:error("Received unexpected info message: ~w", [Info]),

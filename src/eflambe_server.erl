@@ -71,9 +71,7 @@ init([]) ->
 
 -spec handle_call(Request :: any(), from(), state()) ->
                                   {reply, Reply :: any(), state()} |
-                                  {reply, Reply :: any(), state(), timeout()} |
-                                  {stop, Reason :: any(), Reply :: any(), state()} |
-                                  {stop, Reason :: any(), state()}.
+                                  {reply, Reply :: any(), state(), timeout()}.
 
 handle_call({start_trace, Id, CallLimit, Options}, _From, State) ->
     case get_trace_by_id(State, Id) of
@@ -111,12 +109,17 @@ handle_call({stop_trace, Id}, _From, State) ->
             % No trace found
             {reply, {error, unknown_trace}, State};
 
-        #trace{calls = Calls, options = Options, running = true} = Trace ->
+        #trace{calls = Calls, options = Options, running = true, tracer = TracerPid} = Trace ->
             % Stop trace
             case proplists:get_value(meck, Options) of
                 undefined -> ok;
-                ModuleName -> ok = meck:unload(ModuleName)
+                ModuleName ->
+                    % Unload if module has been mecked
+                    ok = meck:unload(ModuleName)
             end,
+
+            % Stop tracer
+            eflambe_tracer:finish(TracerPid),
             NewState = update_trace(State, Id, Trace#trace{running = false}),
             {reply, {ok, Id, Calls, true, Options}, NewState};
 
