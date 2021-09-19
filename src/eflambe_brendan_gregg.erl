@@ -21,7 +21,7 @@
           options :: eflambe:options(),
           stack = [] :: list(),
           accumulator = [] :: list(),
-          microseconds = 0 :: integer()
+          useconds = 0 :: integer()
          }).
 
 extension() -> {ok, <<"bggg">>}.
@@ -97,7 +97,7 @@ handle_trace_event({trace_ts, _Pid, out, _Command0, TS}, #state{stack = Stack} =
     generate_new_state(State, [sleep|Stack], TS);
 
 % Function returned to a caller higher up on the stack
-handle_trace_event({trace_ts, _Pid, return_to, MFA, TS}, #state{stack=[_Current, MFA|Stack]} = State) ->
+handle_trace_event({trace_ts, _Pid, return_to, MFA, TS}, #state{stack=[_, MFA|Stack]} = State) ->
     generate_new_state(State, [MFA|Stack], TS);
 
 % I don't think I need to worry about these traces
@@ -144,10 +144,9 @@ handle_trace_event(TraceEvent, State) ->
 %%
 %% @end
 %%--------------------------------------------------------------------
-finalize(_Options, #state{file = File} = State) ->
-    % TODO: Using self() is wrong here. We should probably provide the real pid
-    % TODO: Correct the formatting here - (uniq -c | awk '{print $2, " ", $1}')
-    ok = file:write(File, dump_to_iolist(self(), State)),
+finalize(Options, #state{file = File} = State) ->
+    Pid = proplists:get_value(pid, Options),
+    ok = file:write(File, dump_to_iolist(Pid, State)),
     ok = file:close(File),
     {ok, State}.
 
@@ -155,15 +154,14 @@ finalize(_Options, #state{file = File} = State) ->
 %%% Internal functions
 %%%===================================================================
 
-generate_new_state(#state{microseconds = 0} = OldState, NewStack, Timestamp) ->
-    {ok, OldState#state{microseconds=us(Timestamp), stack = NewStack}};
-generate_new_state(#state{file = File, microseconds = Micro, accumulator=Acc} = OldState, NewStack, Timestamp) ->
-    %Diff = us(Timestamp) - Micro,
+generate_new_state(#state{useconds = 0} = OldState, NewStack, TS) ->
+    {ok, OldState#state{useconds=us(TS), stack = NewStack}};
+generate_new_state(#state{accumulator=Acc} = OldState, NewStack, TS) ->
+    %Diff = us(TS) - Micro,
     % Copy paste
     StackRev = lists:reverse(NewStack),
-    Stacks = [StackRev || _ <- lists:seq(1, 2)],
-    io:format("Stacks: ~p~n", [Stacks]),
-    {ok, OldState#state{microseconds=us(Timestamp), accumulator=lists:append(Stacks, Acc), stack=NewStack}}.
+    NewAcc = lists:append([StackRev], Acc),
+    {ok, OldState#state{useconds=us(TS), accumulator=NewAcc, stack=NewStack}}.
 
 us({Mega, Secs, Micro}) ->
     Mega*1000*1000*1000*1000 + Secs*1000*1000 + Micro.
@@ -177,10 +175,22 @@ entry_to_iolist(A) when is_atom(A) ->
     [atom_to_binary(A, utf8)].
 
 dump_to_iolist(Pid, #state{accumulator=Acc}) ->
-    [[pid_to_list(Pid), <<";">>, stack_collapse(S), <<"\n">>] || S <- lists:reverse(Acc)].
+    % Collapse multiple matching stacks into a single stack with a count
+    CollapsedAcc = lists:foldl(fun
+                               (Prev, [{Count, Prev}|Rest]) -> [{Count + 1, Prev}|Rest];
+                               (Current, Acc) -> [{1, Current}|Acc]
+                               end, [], lists:reverse(Acc)),
+
+    % Format lines in the Brendan Gregg collapsed stack format
+    [format_line(Pid, Stack, Count) || {Count, Stack} <- CollapsedAcc].
 
 intercalate(Sep, Xs) -> lists:concat(intersperse(Sep, Xs)).
 
 intersperse(_, []) -> [];
 intersperse(_, [X]) -> [X];
 intersperse(Sep, [X | Xs]) -> [X, Sep | intersperse(Sep, Xs)].
+
+format_count(Count) -> io_lib:format("~B", [Count]).
+
+format_line(Pid, Stack, Count) ->
+    [pid_to_list(Pid), <<";">>, stack_collapse(Stack), <<" ">>, format_count(Count), <<"\n">>].
