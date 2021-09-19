@@ -16,7 +16,7 @@
 -export([extension/0, init/2, handle_trace_event/2, finalize/2]).
 
 -record(state, {
-          file :: any(),
+          filename :: any(),
           options :: eflambe:options(),
           stack = [] :: list(),
           accumulator = [] :: list(),
@@ -33,8 +33,7 @@ extension() -> {ok, <<"bggg">>}.
 %% @end
 %%--------------------------------------------------------------------
 init(Filename, Options) ->
-    {ok, File} = file:open(Filename, [write, exclusive]),
-    {ok, #state{file = File, options = Options}}.
+    {ok, #state{filename = Filename, options = Options}}.
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -115,7 +114,8 @@ handle_trace_event(TraceEvent, State) ->
 %%
 %% @end
 %%--------------------------------------------------------------------
-finalize(Options, #state{file = File} = State) ->
+finalize(Options, #state{filename = Filename} = State) ->
+    {ok, File} = file:open(Filename, [write, exclusive]),
     Pid = proplists:get_value(pid, Options),
     ok = file:write(File, dump_to_iolist(Pid, State)),
     ok = file:close(File),
