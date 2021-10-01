@@ -55,7 +55,7 @@ capture({Module, Function, Arity}, NumCalls, Options) ->
         Results
     end,
 
-    MockFun = mock_fun(Arity, ShimmedFunction),
+    MockFun = gen_mock_fun(Arity, ShimmedFunction),
 
     % Replace the original function with our new function that wraps the old
     % function in profiling code.
@@ -132,27 +132,24 @@ setup_for_trace() ->
     % All traces must have a unique ref so we can keep track of them
     make_ref().
 
-% Total hack
-% TODO: Is there a way to programmatically generate a function of a given arity?
-% I asked here:
-% https://stackoverflow.com/questions/69244814/erlang-generate-anonymous-function-of-an-arbitary-arity
-mock_fun(1, Function) ->
-    fun(A) -> Function([A]) end;
-mock_fun(2, Function) ->
-    fun(A, B) -> Function([A, B]) end;
-mock_fun(3, Function) ->
-    fun(A, B, C) -> Function([A, B, C]) end;
-mock_fun(4, Function) ->
-    fun(A, B, C, D) -> Function([A, B, C, D]) end;
-mock_fun(5, Function) ->
-    fun(A, B, C, D, E) -> Function([A, B, C, D, E]) end;
-mock_fun(6, Function) ->
-    fun(A, B, C, D, E, F) -> Function([A, B, C, D, E, F]) end;
-mock_fun(7, Function) ->
-    fun(A, B, C, D, E, F, G) -> Function([A, B, C, D, E, F, G]) end;
-mock_fun(8, Function) ->
-    fun(A, B, C, D, E, F, G, H) -> Function([A, B, C, D, E, F, G, H]) end;
-mock_fun(9, Function) ->
-    fun(A, B, C, D, E, F, G, H, I) -> Function([A, B, C, D, E, F, G, H, I]) end;
-mock_fun(10, Function) ->
-    fun(A, B, C, D, E, F, G, H, I, J) -> Function([A, B, C, D, E, F, G, H, I, J]) end.
+
+% This function dyanmically generates a function of a specified arity that
+% invokes `Function` with the list of all the arguments.
+% https://stackoverflow.com/questions/69244814/erlang-generate-anonymous-function-of-an-arbitary-arity/69249746#69249746
+
+-spec gen_mock_fun(non_neg_integer(), function()) -> function().
+
+gen_mock_fun(Arity, Function) when is_function(Function) ->
+    ParamVars = [list_to_atom([$X| integer_to_list(I)]) || I <- lists:seq(1, Arity)],
+    Params = [{var, 1, Var} || Var <- ParamVars],
+    ParamsList = lists:foldl(fun(Elem, Acc) ->
+                        {cons,1,{var,1, Elem}, Acc}
+                end, {nil,1}, lists:reverse(ParamVars)),
+
+    Expr =
+        {'fun',
+         1,
+         {clauses, [{clause, 1, Params, [], [{call, 1, {var, 1, 'Function'}, [ParamsList]}]}]}},
+    {value, Fun, _Vars} = erl_eval:expr(Expr, [{'Function', Function}]),
+    true = is_function(Fun),
+    Fun.
