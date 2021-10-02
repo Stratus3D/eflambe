@@ -135,7 +135,7 @@ setup_for_trace() ->
 
 % This function dyanmically generates a function of a specified arity that
 % invokes `Function` with the list of all the arguments.
-% https://stackoverflow.com/questions/69244814/erlang-generate-anonymous-function-of-an-arbitary-arity/69249746#69249746
+% https://stackoverflow.com/questions/69244814/erlang-generate-anonymous-function-of-an-arbitary-arity
 
 -spec gen_mock_fun(non_neg_integer(), function()) -> function().
 
@@ -143,8 +143,8 @@ gen_mock_fun(Arity, Function) when is_function(Function) ->
     ParamVars = [list_to_atom([$X| integer_to_list(I)]) || I <- lists:seq(1, Arity)],
     Params = [{var, 1, Var} || Var <- ParamVars],
     ParamsList = lists:foldl(fun(Elem, Acc) ->
-                        {cons,1,{var,1, Elem}, Acc}
-                end, {nil,1}, lists:reverse(ParamVars)),
+                        {cons, 1, {var, 1, Elem}, Acc}
+                end, {nil, 1}, lists:reverse(ParamVars)),
 
     Expr =
         {'fun',
