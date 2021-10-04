@@ -15,8 +15,7 @@
 -export([init/1,
          handle_call/3,
          handle_cast/2,
-         handle_info/2,
-         terminate/2]).
+         handle_info/2]).
 
 -include_lib("kernel/include/logger.hrl").
 
@@ -135,11 +134,7 @@ handle_call({stop_trace, Id}, _From, State) ->
 
             NewState = update_trace(State, Id, Trace#trace{running = false}),
             {reply, {ok, Changed}, NewState}
-    end;
-
-handle_call(_Request, _From, State) ->
-    Reply = ok,
-    {reply, Reply, State}.
+    end.
 
 -spec handle_cast(any(), state()) -> {noreply, state()} |
                                  {noreply, state(), timeout()} |
@@ -155,11 +150,6 @@ handle_cast(_Msg, State) ->
 handle_info(Info, State) ->
     logger:error("Received unexpected info message: ~w", [Info]),
     {noreply, State}.
-
--spec terminate(Reason :: any(), state()) -> any().
-
-terminate(_Reason, _State) ->
-    ok.
 
 %%%===================================================================
 %%% Internal functions
