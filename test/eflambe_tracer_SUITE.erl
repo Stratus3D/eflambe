@@ -31,7 +31,7 @@ all() ->
     ].
 
 suite() ->
-    [{ct_hooks,[cth_surefire]}, {timetrap, {seconds, 30}}].
+    [{ct_hooks, [cth_surefire]}, {timetrap, {seconds, 30}}].
 
 groups() ->
     [].

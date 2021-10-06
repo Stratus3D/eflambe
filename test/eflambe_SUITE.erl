@@ -39,7 +39,7 @@ all() ->
     ].
 
 suite() ->
-    [{ct_hooks,[cth_surefire]}, {timetrap, {seconds, 30}}].
+    [{ct_hooks, [cth_surefire]}, {timetrap, {seconds, 30}}].
 
 groups() ->
     [].
@@ -87,12 +87,12 @@ capture(_Config) ->
     % Shouldn't crash when invoked
     eflambe:capture({arithmetic, multiply, 2}, 1, Options),
 
-    12 = arithmetic:multiply(4,3),
+    12 = arithmetic:multiply(4, 3),
 
     % Should behave the same when run a second time
     eflambe:capture({arithmetic, multiply, 2}, 1, Options),
 
-    12 = arithmetic:multiply(4,3),
+    12 = arithmetic:multiply(4, 3),
 
     ok = application:stop(eflambe).
 
@@ -100,10 +100,10 @@ apply(_Config) ->
     Options = [{output_format, plain}],
 
     % Shouldn't crash when invoked
-    eflambe:apply({arithmetic, multiply, [2,3]}, Options),
+    eflambe:apply({arithmetic, multiply, [2, 3]}, Options),
 
     % Should behave the same when run a second time
-    eflambe:apply({arithmetic, multiply, [2,3]}, Options),
+    eflambe:apply({arithmetic, multiply, [2, 3]}, Options),
 
     ok = application:stop(eflambe).
 
@@ -114,10 +114,10 @@ capture_and_apply_brendan_gregg(_Config) ->
     NumFiles = length(Files),
 
     % Both calls should work with the brendan gregg formatter
-    eflambe:apply({arithmetic, multiply, [2,3]}, Options),
+    eflambe:apply({arithmetic, multiply, [2, 3]}, Options),
 
     eflambe:capture({arithmetic, multiply, 2}, 1, Options),
-    12 = arithmetic:multiply(4,3),
+    12 = arithmetic:multiply(4, 3),
 
     % Both write separate trace files
     {ok, UpdatedFiles} = file:list_dir("."),
@@ -140,8 +140,8 @@ multiple_captures(_Config) ->
 
     % Capturing multiple calls should result in multiple output files
     eflambe:capture({arithmetic, multiply, 2}, 2, Options),
-    12 = arithmetic:multiply(4,3),
-    20 = arithmetic:multiply(5,4),
+    12 = arithmetic:multiply(4, 3),
+    20 = arithmetic:multiply(5, 4),
 
     % Both write separate trace files
     {ok, UpdatedFiles} = file:list_dir("."),
