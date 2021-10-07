@@ -146,10 +146,13 @@ gen_mock_fun(Arity, Function) when is_function(Function) ->
                         {cons, 1, {var, 1, Elem}, Acc}
                 end, {nil, 1}, lists:reverse(ParamVars)),
 
+    Anno = erl_anno:new(1),
+
+    FunctionCall = {call, Anno, {var, Anno, 'Function'}, [ParamsList]},
     Expr =
         {'fun',
-         1,
-         {clauses, [{clause, 1, Params, [], [{call, 1, {var, 1, 'Function'}, [ParamsList]}]}]}},
+         Anno,
+         {clauses, [{clause, Anno, Params, [], [FunctionCall]}]}},
+
     {value, Fun, _Vars} = erl_eval:expr(Expr, [{'Function', Function}]),
-    true = is_function(Fun),
     Fun.
