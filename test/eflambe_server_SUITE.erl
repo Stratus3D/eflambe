@@ -85,25 +85,26 @@ start_trace(_Config) ->
     Options = [{output_format, plain}],
 
     % Returns an error when eflambe_server isn't running
-    {'EXIT', {noproc, {gen_server, call, _}}} = (catch eflambe_server:start_trace(foobar, 1, Options)),
+    {'EXIT', {noproc, {gen_server, call, _}}} =
+    (catch eflambe_server:start_trace(foobar, 1, Options)),
 
     % Returns an ok tuple when eflambe_server is running and arguments are valid
     {ok, _Pid} = eflambe_server:start_link(),
-    [] = get_gen_server_state(eflambe_server),
+    [] = get_gen_server_state(),
     {ok, foobar, true, TracerPid} = eflambe_server:start_trace(foobar, 1, Options),
 
     % Stores trace state
-    [{trace, foobar, 1, 1, true, TracerPid, Options}] = get_gen_server_state(eflambe_server),
+    [{trace, foobar, 1, 1, true, TracerPid, Options}] = get_gen_server_state(),
 
     % Returns the same trace data when called twice
     {ok, foobar, false, _TracerPid} = eflambe_server:start_trace(foobar, 1, Options),
-    [{trace, foobar, 1, 1, true, TracerPid, Options}] = get_gen_server_state(eflambe_server),
+    [{trace, foobar, 1, 1, true, TracerPid, Options}] = get_gen_server_state(),
 
     % Returns false when trace is stopped but number of calls has already been reached
     {ok, true} = eflambe_server:stop_trace(foobar),
     {ok, foobar, false, _TracerPid} = eflambe_server:start_trace(foobar, 1, Options),
 
-    [{trace, foobar, 1, 1, false, TracerPid, Options}] = get_gen_server_state(eflambe_server).
+    [{trace, foobar, 1, 1, false, TracerPid, Options}] = get_gen_server_state().
 
 stop_trace(_Config) ->
     Options = [{output_format, plain}],
@@ -120,7 +121,10 @@ stop_trace(_Config) ->
     {ok, true} = eflambe_server:stop_trace(foobar),
 
     % Updates trace state on the server
-    [{trace, foobar, 1, 1, false, TracerPid, Options}] = get_gen_server_state(eflambe_server).
+    [{trace, foobar, 1, 1, false, TracerPid, Options}] = get_gen_server_state().
+
+get_gen_server_state() ->
+    get_gen_server_state(eflambe_server).
 
 get_gen_server_state(Name) ->
     {status, _, _, State} = sys:get_status(Name),
