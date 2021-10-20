@@ -20,8 +20,7 @@
          handle_call/3,
          handle_cast/2,
          handle_continue/2,
-         handle_info/2,
-         terminate/2]).
+         handle_info/2]).
 
 -include_lib("kernel/include/logger.hrl").
 
@@ -102,15 +101,9 @@ handle_call(finish, _From, #state{impl = Impl, impl_state = ImplState, options =
     % The only reason we don't stop here is because this is a call and the
     % linked call would crash as well. This feels kind of wrong so I may revisit
     % this
-    {reply, ok, State, {continue, finish}};
+    {reply, ok, State, {continue, finish}}.
 
-handle_call(_Request, _From, State) ->
-    Reply = ok,
-    {reply, Reply, State}.
-
--spec handle_cast(any(), state()) -> {noreply, state()} |
-                                 {noreply, state(), timeout()} |
-                                 {stop, Reason :: any(), state()}.
+-spec handle_cast(any(), state()) -> {noreply, state()}.
 
 handle_cast(_Msg, State) ->
     {noreply, State}.
@@ -130,11 +123,6 @@ handle_info(TraceMessage, #state{impl = Impl, impl_state = ImplState} = State)
 handle_info(Info, State) ->
     logger:error("Received unexpected info message: ~w", [Info]),
     {noreply, State}.
-
--spec terminate(Reason :: any(), state()) -> any().
-
-terminate(_Reason, _State) ->
-    ok.
 
 %%%===================================================================
 %%% Internal functions
