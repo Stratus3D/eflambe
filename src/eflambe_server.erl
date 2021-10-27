@@ -60,7 +60,7 @@ start_trace(Id, MaxCalls, Options) ->
 -spec stop_trace(reference()) -> {ok, boolean()}.
 
 stop_trace(Id) ->
-    gen_server:call(?SERVER, {stop_trace, Id}).
+    gen_server:call(?SERVER, {stop_trace, Id}, infinity).
 
 
 %%%===================================================================
