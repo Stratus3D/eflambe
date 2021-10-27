@@ -55,7 +55,7 @@ start_link(Options) ->
     gen_server:start_link(?MODULE, [Options], []).
 
 finish(Pid) ->
-    gen_server:call(Pid, finish).
+    gen_server:call(Pid, finish, infinity).
 
 %%%===================================================================
 %%% gen_server callbacks
