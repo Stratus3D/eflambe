@@ -1,6 +1,6 @@
 {application,eflambe,
              [{description,"A tool for rapid profiling of Erlang and Elixir applications."},
-              {vsn,"0.2.1"},
+              {vsn,"0.2.2"},
               {registered,[eflambe_sup,eflambe_server]},
               {mod,{eflambe_app,[]}},
               {applications,[kernel,stdlib]},
@@ -9,6 +9,5 @@
                         eflambe_output_formatter,eflambe_plain,eflambe_server,
                         eflambe_sup,eflambe_tracer]},
               {licenses,["Apache 2.0"]},
-              {links,[{"Github", "https://github.com/Stratus3D/eflambe/"},
-                      {"Documentation", "https://stratus3d.com/eflambe/"}
-                     ]}]}.
+              {links,[{"Github","https://github.com/Stratus3D/eflambe/"},
+                      {"Documentation","https://stratus3d.com/eflambe/"}]}]}.
