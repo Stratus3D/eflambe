@@ -9,4 +9,6 @@
                         eflambe_output_formatter,eflambe_plain,eflambe_server,
                         eflambe_sup,eflambe_tracer]},
               {licenses,["Apache 2.0"]},
-              {links,[]}]}.
+              {links,[{"Github", "https://github.com/Stratus3D/eflambe/"},
+                      {"Documentation", "https://stratus3d.com/eflambe/"}
+                     ]}]}.
