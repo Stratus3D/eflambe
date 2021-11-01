@@ -1,0 +1,51 @@
+name: Validate Code
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+  push:
+    branches:
+      - main
+jobs:
+  compile:
+    name: Compile code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: '23.2.4'
+          rebar3-version: '3.16.1'
+      - run: rebar3 compile
+  test:
+    name: Run Common Test tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: '23.2.4'
+          rebar3-version: '3.16.1'
+      - run: rebar3 ct
+  dialyzer:
+    name: Run Dialyzer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: '23.2.4'
+          rebar3-version: '3.16.1'
+      - run: rebar3 dialyzer
+  lint:
+    name: Run elvis linting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: '23.2.4'
+          rebar3-version: '3.16.1'
+      - run: rebar3 lint
