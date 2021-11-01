@@ -17,4 +17,13 @@ _build
 *.iml
 rebar3.crashdump
 *~
+
+# Ignore generated flamegraphs
 *.bggg
+flamegraphs/*
+
+# Ignore generated documentation html
+doc/*.html
+doc/*.png
+doc/*.css
+doc/edoc-info

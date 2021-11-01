@@ -1,4 +1,5 @@
 %%%-------------------------------------------------------------------
+%%% @copyright 2021 Trevor Brown (Apache-2.0 License)
 %%% @doc
 %%% Generates raw trace messages. This output format is for testing.
 %%% @end

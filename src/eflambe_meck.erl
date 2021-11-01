@@ -2,6 +2,7 @@
 %%% @doc
 %%% Helper functions for mocking with meck in eflambe
 %%% @end
+%%% @hidden
 %%%-------------------------------------------------------------------
 -module(eflambe_meck).
 

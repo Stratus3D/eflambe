@@ -1,3 +1,9 @@
+%%%-------------------------------------------------------------------
+%%% @copyright 2021 Trevor Brown (Apache-2.0 License)
+%%% @doc
+%%% Generates SVG graphics from trace messages.
+%%% @end
+%%%-------------------------------------------------------------------
 -module(eflambe_svg).
 
 -behaviour(eflambe_output_formatter).

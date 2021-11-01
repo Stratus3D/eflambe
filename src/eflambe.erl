@@ -1,8 +1,8 @@
 %%%-------------------------------------------------------------------
+%%% @copyright 2021 Trevor Brown (Apache-2.0 License)
 %%% @doc
-%%% This module provides the public API for eflambe. These public functions are
-%%% intended to be invoked by the end user to perform profiling of their
-%%% application.
+%%% eflambe profiling functions. Invoke these public functions to perform
+%%% profiling of functions in your Erlang/Elixir application.
 %%% @end
 %%%-------------------------------------------------------------------
 -module(eflambe).

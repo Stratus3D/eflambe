@@ -1,4 +1,5 @@
 %%%-------------------------------------------------------------------
+%%% @copyright 2021 Trevor Brown (Apache-2.0 License)
 %%% @doc
 %%% Output formatter behaviour. This behavior is used so we can swap in a stub
 %%% for testing the tracer.
