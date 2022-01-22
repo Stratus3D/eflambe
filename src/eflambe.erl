@@ -41,7 +41,8 @@ capture(MFA, NumCalls) ->
 
 -spec capture(MFA :: mfa(), NumCalls :: integer(), Options :: options()) -> ok.
 
-capture({Module, Function, Arity}, NumCalls, Options) ->
+capture({Module, Function, Arity}, NumCalls, Options)
+  when is_atom(Module), is_atom(Function), is_integer(Arity) ->
     ok = meck:new(Module, [unstick, passthrough]),
     TraceId = setup_for_trace(),
 
@@ -77,7 +78,7 @@ apply(Function) ->
 
 -spec apply(Function :: mfa_fun(), Options :: options()) -> any().
 
-apply({Module, Function, Args}, Options) ->
+apply({Module, Function, Args}, Options) when is_atom(Module), is_atom(Function), is_list(Args) ->
     TraceId = setup_for_trace(),
     Trace = start_trace(TraceId, 1, Options),
 
@@ -87,7 +88,7 @@ apply({Module, Function, Args}, Options) ->
     stop_trace(Trace),
     Results;
 
-apply({Function, Args}, Options) ->
+apply({Function, Args}, Options) when is_function(Function), is_list(Args) ->
     TraceId = setup_for_trace(),
     Trace = start_trace(TraceId, 1, Options),
 
