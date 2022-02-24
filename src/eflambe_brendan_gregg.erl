@@ -100,6 +100,22 @@ handle_trace_event({trace_ts, _Pid, out, _Command0, TS}, #state{stack = Stack} =
 handle_trace_event({trace_ts, _Pid, return_to, MFA, TS}, #state{stack=[_, MFA|Stack]} = State) ->
     generate_new_state(State, [MFA|Stack], TS);
 
+% Ignore garbage collection minor start
+handle_trace_event({trace_ts, _Pid, gc_minor_start, _Stats, _TS}, #state{} = State) ->
+    {ok, State};
+
+% Ignore garbage collection minor end
+handle_trace_event({trace_ts, _Pid, gc_minor_end, _Stats, _TS}, #state{} = State) ->
+    {ok, State};
+
+% Ignore garbage collection major start
+handle_trace_event({trace_ts, _Pid, gc_major_start, _Stats, _TS}, #state{} = State) ->
+    {ok, State};
+
+% Ignore garbage collection major end
+handle_trace_event({trace_ts, _Pid, gc_major_end, _Stats, _TS}, #state{} = State) ->
+    {ok, State};
+
 % I don't think I need to worry about these traces
 %handle_trace_event({trace_ts, _Pid, return_to, _MFA, _TS}, State) ->
 %    State;
