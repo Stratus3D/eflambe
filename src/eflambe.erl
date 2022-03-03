@@ -84,7 +84,7 @@ apply(Function) ->
 
 apply({Module, Function, Args}, Options) when is_atom(Module), is_atom(Function), is_list(Args) ->
     TraceId = setup_for_trace(),
-    Trace = start_trace(TraceId, 1, Options),
+    {Trace, _StartedNew} = start_trace(TraceId, 1, Options),
 
     % Invoke the original function
     Results = erlang:apply(Module, Function, Args),
@@ -94,7 +94,7 @@ apply({Module, Function, Args}, Options) when is_atom(Module), is_atom(Function)
 
 apply({Function, Args}, Options) when is_function(Function), is_list(Args) ->
     TraceId = setup_for_trace(),
-    Trace = start_trace(TraceId, 1, Options),
+    {Trace, _StartedNew} = start_trace(TraceId, 1, Options),
 
     % Invoke the original function
     Results = erlang:apply(Function, Args),
@@ -123,7 +123,7 @@ start_trace(TraceId, NumCalls, Options) ->
             {TraceId, false}
     end.
 
--spec stop_trace(any()) -> ok.
+-spec stop_trace(reference()) -> ok.
 
 stop_trace(Trace) ->
     erlang:trace(self(), false, [all]),
