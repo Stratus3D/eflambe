@@ -47,12 +47,16 @@ capture({Module, Function, Arity}, NumCalls, Options)
     TraceId = setup_for_trace(),
 
     ShimmedFunction = fun(Args) ->
-        Trace = start_trace(TraceId, NumCalls, [{meck, Module}|Options]),
-
+        {Trace, StartedNew} = start_trace(TraceId, NumCalls, [{meck, Module}|Options]),
         % Invoke the original function
         Results = meck:passthrough(Args),
 
-        stop_trace(Trace),
+        case StartedNew of
+            true ->
+                stop_trace(Trace);
+            false ->
+                ok
+        end,
         Results
     end,
 
@@ -80,7 +84,7 @@ apply(Function) ->
 
 apply({Module, Function, Args}, Options) when is_atom(Module), is_atom(Function), is_list(Args) ->
     TraceId = setup_for_trace(),
-    Trace = start_trace(TraceId, 1, Options),
+    {Trace, _StartedNew} = start_trace(TraceId, 1, Options),
 
     % Invoke the original function
     Results = erlang:apply(Module, Function, Args),
@@ -90,7 +94,7 @@ apply({Module, Function, Args}, Options) when is_atom(Module), is_atom(Function)
 
 apply({Function, Args}, Options) when is_function(Function), is_list(Args) ->
     TraceId = setup_for_trace(),
-    Trace = start_trace(TraceId, 1, Options),
+    {Trace, _StartedNew} = start_trace(TraceId, 1, Options),
 
     % Invoke the original function
     Results = erlang:apply(Function, Args),
@@ -102,7 +106,8 @@ apply({Function, Args}, Options) when is_function(Function), is_list(Args) ->
 %%% Internal functions
 %%%===================================================================
 
--spec start_trace(TraceId :: any(), NumCalls :: integer(), Options :: list()) -> reference().
+-spec start_trace(TraceId :: any(), NumCalls :: integer(), Options :: list()) ->
+    {reference(), boolean()}.
 
 start_trace(TraceId, NumCalls, Options) ->
     case eflambe_server:start_trace(TraceId, NumCalls, Options) of
@@ -110,16 +115,15 @@ start_trace(TraceId, NumCalls, Options) ->
             MatchSpec = [{'_', [], [{message, {{cp, {caller}}}}]}],
             erlang:trace_pattern(on_load, MatchSpec, [local]),
             erlang:trace_pattern({'_', '_', '_'}, MatchSpec, [local]),
-            erlang:trace(self(), true, [{tracer, Tracer} | ?FLAGS]);
+            erlang:trace(self(), true, [{tracer, Tracer} | ?FLAGS]),
+            {TraceId, true};
         {ok, TraceId, false, _Tracer} ->
             % Trace is already running or has already finished. Or this could
             % be a recursive function call.  We do not need to do anything.
-            ok
-    end,
+            {TraceId, false}
+    end.
 
-    TraceId.
-
--spec stop_trace(any()) -> ok.
+-spec stop_trace(reference()) -> ok.
 
 stop_trace(Trace) ->
     erlang:trace(self(), false, [all]),
