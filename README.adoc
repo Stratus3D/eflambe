@@ -66,8 +66,8 @@ For profiling a function that you want to invoke directly.
 
 [source, erlang]
 ----
-eflambe:capture({Module :: atom(), Function :: atom(), Args :: list()}, NumberOfCallsToProfile :: integer(), Options :: list()).
-eflambe:capture(Fun :: fun(), NumberOfCallsToProfile :: integer(), Options :: list()).
+eflambe:apply({Module :: atom(), Function :: atom(), Args :: list()}, Options :: list()).
+eflambe:apply(Fun :: fun(), Options :: list()).
 ----
 
 Example:
