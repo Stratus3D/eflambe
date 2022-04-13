@@ -14,7 +14,7 @@
 -type mfa_fun() :: {atom(), atom(), list()} | fun().
 
 -type program() :: hotspot | speedscope.
--type option() :: {output_directory, binary()} | {output_format, binary()} | {open, program()}.
+-type option() :: {output_directory, binary()} | {output_format, brendan_gregg} | {open, program()}.
 -type options() :: [option()].
 
 -define(FLAGS, [call, return_to, running, procs, garbage_collection, arity,
@@ -34,12 +34,12 @@
 capture(MFA) ->
     capture(MFA, 1).
 
--spec capture(MFA :: mfa(), NumCalls :: integer()) -> ok.
+-spec capture(MFA :: mfa(), NumCalls :: pos_integer()) -> ok.
 
 capture(MFA, NumCalls) ->
     capture(MFA, NumCalls, []).
 
--spec capture(MFA :: mfa(), NumCalls :: integer(), Options :: options()) -> ok.
+-spec capture(MFA :: mfa(), NumCalls :: pos_integer(), Options :: options()) -> ok.
 
 capture({Module, Function, Arity}, NumCalls, Options)
   when is_atom(Module), is_atom(Function), is_integer(Arity) ->
@@ -106,7 +106,7 @@ apply({Function, Args}, Options) when is_function(Function), is_list(Args) ->
 %%% Internal functions
 %%%===================================================================
 
--spec start_trace(TraceId :: any(), NumCalls :: integer(), Options :: list()) ->
+-spec start_trace(TraceId :: any(), NumCalls :: pos_integer(), Options :: list()) ->
     {reference(), boolean()}.
 
 start_trace(TraceId, NumCalls, Options) ->
