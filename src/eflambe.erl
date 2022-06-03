@@ -138,7 +138,7 @@ setup_for_trace() ->
     make_ref().
 
 
-% This function dyanmically generates a function of a specified arity that
+% This function dynamically generates a function of a specified arity that
 % invokes `Function` with the list of all the arguments.
 % https://stackoverflow.com/questions/69244814/erlang-generate-anonymous-function-of-an-arbitary-arity
 
