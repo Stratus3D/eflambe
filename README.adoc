@@ -27,7 +27,7 @@ Add the following line to your `mix.exs` file and then run `mix deps.get`:
 
 [source, elixir]
 ----
-{:eflambe, "~> 0.2.1"}
+{:eflambe, "~> 0.2.4"}
 ----
 
 === Erlang
@@ -36,7 +36,7 @@ Add the following line to your `rebar.config` file and then run `rebar3 get-deps
 
 [source, erlang]
 ----
-{eflambe, "0.2.1"}
+{eflambe, "0.2.4"}
 ----
 
 == Usage
@@ -104,3 +104,10 @@ Heavily inspired by:
 
 Feedback is welcome! This was started as a hackathon project but I plan on maintaining it for my teams every day use, so if you see something that could be improved please open an issue!
 
+==== Tagging Releases
+
+1. Update versions in `README.adoc` and `CITATION.cff` to new version.
+1. Run `git add README.adoc CITATION.cff`.
+1. Use `rebar3 hex cut` and type `Y` when asked to create a commit.
+1. Run `git tag <new tag>`.
+1. Run `git push origin master <new tag>`.
