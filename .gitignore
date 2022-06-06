@@ -17,3 +17,10 @@ _build
 *.iml
 rebar3.crashdump
 *~
+
+# Generated documentation html
+doc/*
+!doc/overview.edoc
+
+# Generated website html
+site/*.html

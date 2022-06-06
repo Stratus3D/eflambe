@@ -1,0 +1,80 @@
+html {
+    background: #fff;
+}
+
+body {
+    color: #111;
+    font-family: Helvetica, sans-serif;
+    margin: 0 auto;
+    width: 66%;
+    padding: 1em;
+}
+
+header {
+    border-bottom: 1px solid #2f80ed;
+    margin-bottom: 3em;
+}
+
+h1 {
+    color: #333333;
+}
+
+h2, h3 {
+}
+
+h4 {
+    font-size: 1.2em;
+    color:#ae1037;
+}
+
+code, .spec {
+    font-family: 'Ubuntu Mono', sans-serif;
+    color: #;
+    background: #eee;
+    border: 1px dotted #003846;
+}
+article div p code {
+    background: inherit;
+    border: inherit;
+    color: inherit;
+}
+
+nav {
+    float: right;
+    margin-top: -5em;
+    margin-left: 5em;
+}
+nav ul li {
+    float: left;
+    list-style-type: none;
+    width: 7.5em;
+    text-align: center;
+}
+
+ul.definitions {
+    list-style-type: none;
+}
+
+.spec {
+    margin-left: 1em;
+    border: 1px dotted #6b8188;
+    padding-left: 1em;
+}
+
+dl dt {
+    font-weight: bold;
+}
+
+ a:link {color:#ae1037;}      /* unvisited link */
+ a:visited {color:#ae1037;}      /* visited link */
+ a:hover {color:#333333;}     /* mouse over link */
+ a:active {color:#333333;}    /* selected link */ 
+
+ table, th, td {
+   border: 1px solid #e4e4e4;
+   padding: 0.3em;
+}
+
+ img {
+   max-width: 100%;
+ }
