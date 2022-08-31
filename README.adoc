@@ -95,6 +95,10 @@ Heavily inspired by:
 * https://github.com/proger/eflame
 * https://github.com/ebegumisa/flame_prof
 
+=== Architecture Diagram
+
+image:doc/architecture_diagram.svg[Static]
+
 == TODO
 
 * Implement SVG and Perf output formatters
