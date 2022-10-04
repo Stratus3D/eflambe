@@ -1,5 +1,5 @@
 digraph eflambe {
-    label=<<b>Dashed lines are calls, solid are spawns, dotted are implements</b>>
+    label=<<b>Key:</b><br/>* Dashed lines are calls<br/>* Solid lines are spawns<br/>* Dotted are implements>
     node[ shape=rectangle]
 
     subgraph cluster_public_api {
@@ -10,23 +10,27 @@ digraph eflambe {
         eflambe
     }
 
-    eflambe -> eflambe_server [style=dashed]
+    subgraph cluster_function_trace {
+        label = "Per Trace"
+        eflambe_server -> eflambe_tracer [label="start_link"]
+
+        subgraph cluster_function_process_trace {
+            label = "Per Traced Process"
+            eflambe_tracer
+        }
+    }
+
+    eflambe -> eflambe_sup [style=dashed]
+    eflambe -> eflambe_tracer
     eflambe_app [shape=Mdiamond]
     eflambe_app -> eflambe_sup
     eflambe_sup -> eflambe_server
-    eflambe_server
+
     eflambe_output_formatter [shape=oval]
 
-    subgraph cluster_function_trace {
-        label = "Per Function Trace"
-
-        eflambe_tracer -> eflambe_plain [style=dashed]
-        eflambe_tracer -> eflambe_brendan_gregg [style=dashed]
-    }
+    eflambe_tracer -> eflambe_plain [style=dashed]
+    eflambe_tracer -> eflambe_brendan_gregg [style=dashed]
 
     eflambe_plain -> eflambe_output_formatter [label="implements", style=dotted]
     eflambe_brendan_gregg -> eflambe_output_formatter [label="implements", style=dotted]
-
-
-    eflambe_server -> eflambe_tracer [label="start_link"]
 }
