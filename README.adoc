@@ -99,11 +99,6 @@ Heavily inspired by:
 
 image:doc/architecture_diagram.svg[Static]
 
-== TODO
-
-* Implement SVG and Perf output formatters
-* Revisit application supervision structure. Should I have a `simple_one_for_one` supervisor for all tracer processes?
-
 == Contributing
 
 Feedback is welcome! This was started as a hackathon project but I plan on maintaining it for my teams every day use, so if you see something that could be improved please open an issue!
