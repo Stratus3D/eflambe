@@ -43,7 +43,6 @@ capture(MFA, NumCalls) ->
 
 capture({Module, Function, Arity}, NumCalls, Options)
   when is_atom(Module), is_atom(Function), is_integer(Arity) ->
-    ok = meck:new(Module, [unstick, passthrough]),
     TraceId = setup_for_trace(),
 
     ShimmedFunction = fun(Args) ->
@@ -60,11 +59,7 @@ capture({Module, Function, Arity}, NumCalls, Options)
         Results
     end,
 
-    MockFun = gen_mock_fun(Arity, ShimmedFunction),
-
-    % Replace the original function with our new function that wraps the old
-    % function in profiling code.
-    meck:expect(Module, Function, MockFun).
+    eflambe_meck:shim(Module, Function, Arity, ShimmedFunction).
 
 
 %%--------------------------------------------------------------------
@@ -136,28 +131,3 @@ setup_for_trace() ->
 
     % All traces must have a unique ref so we can keep track of them
     make_ref().
-
-
-% This function dynamically generates a function of a specified arity that
-% invokes `Function` with the list of all the arguments.
-% https://stackoverflow.com/questions/69244814/erlang-generate-anonymous-function-of-an-arbitary-arity
-
--spec gen_mock_fun(non_neg_integer(), function()) -> function().
-
-gen_mock_fun(Arity, Function) when is_function(Function) ->
-    ParamVars = [list_to_atom([$X| integer_to_list(I)]) || I <- lists:seq(1, Arity)],
-    Params = [{var, 1, Var} || Var <- ParamVars],
-    ParamsList = lists:foldl(fun(Elem, Acc) ->
-                        {cons, 1, {var, 1, Elem}, Acc}
-                end, {nil, 1}, lists:reverse(ParamVars)),
-
-    Anno = erl_anno:new(1),
-
-    FunctionCall = {call, Anno, {var, Anno, 'Function'}, [ParamsList]},
-    Expr =
-        {'fun',
-         Anno,
-         {clauses, [{clause, Anno, Params, [], [FunctionCall]}]}},
-
-    {value, Fun, _Vars} = erl_eval:expr(Expr, [{'Function', Function}]),
-    Fun.
