@@ -49,7 +49,7 @@ This is useful when you want to profile a function as it is invoked normally ins
 
 [source, erlang]
 ----
-eflambe:capture({Module :: atom(), Function :: atom(), Arity :: integer}, NumberOfCallsToProfile integer(), Options :: list()).
+eflambe:capture({Module :: atom(), Function :: atom(), Arity :: integer}, NumberOfCallsToProfile :: integer(), Options :: list()).
 ----
 
 Example:
