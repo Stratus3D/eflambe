@@ -24,6 +24,7 @@
 -export([
          apply/1,
          capture/1,
+         capture_same_module/1,
          capture_and_apply_brendan_gregg/1,
          multiple_captures/1
         ]).
@@ -34,6 +35,7 @@ all() ->
     [
      apply,
      capture,
+     capture_same_module,
      capture_and_apply_brendan_gregg,
      multiple_captures
     ].
@@ -85,12 +87,12 @@ capture(_Config) ->
     Options = [{output_format, plain}],
 
     % Shouldn't crash when invoked
-    eflambe:capture({arithmetic, multiply, 2}, 1, Options),
+    ok = eflambe:capture({arithmetic, multiply, 2}, 1, Options),
 
     12 = arithmetic:multiply(4, 3),
 
     % Should behave the same when run a second time
-    eflambe:capture({arithmetic, multiply, 2}, 1, Options),
+    ok = eflambe:capture({arithmetic, multiply, 2}, 1, Options),
 
     12 = arithmetic:multiply(4, 3),
 
@@ -116,7 +118,7 @@ capture_and_apply_brendan_gregg(_Config) ->
     % Both calls should work with the brendan gregg formatter
     eflambe:apply({arithmetic, multiply, [2, 3]}, Options),
 
-    eflambe:capture({arithmetic, multiply, 2}, 1, Options),
+    ok = eflambe:capture({arithmetic, multiply, 2}, 1, Options),
     12 = arithmetic:multiply(4, 3),
 
     % Both write separate trace files
@@ -139,7 +141,7 @@ multiple_captures(_Config) ->
     NumFiles = length(Files),
 
     % Capturing multiple calls should result in multiple output files
-    eflambe:capture({arithmetic, multiply, 2}, 2, Options),
+    ok = eflambe:capture({arithmetic, multiply, 2}, 2, Options),
     12 = arithmetic:multiply(4, 3),
     20 = arithmetic:multiply(5, 4),
 
@@ -153,5 +155,38 @@ multiple_captures(_Config) ->
     lists:foreach(fun(Filename) ->
                           ".bggg" = filename:extension(Filename)
                   end, NewFiles),
+
+    ok = application:stop(eflambe).
+
+capture_same_module(_Config) ->
+    Options = [{output_format, brendan_gregg}],
+    % Count files in dir
+    {ok, Files} = file:list_dir("."),
+    NumFiles = length(Files),
+
+    % First call should succeed
+    ok = eflambe:capture({arithmetic, multiply, 2}, 1, Options),
+
+    % This second call should fail and return immediately
+    {error, already_mecked} = eflambe:capture({arithmetic, multiply, 2}, 1, Options),
+
+    12 = arithmetic:multiply(4, 3),
+
+    % First call should succeed and write trace file
+    {ok, UpdatedFiles} = file:list_dir("."),
+    NewNumFiles = length(UpdatedFiles),
+    NewNumFiles = NumFiles + 1,
+
+    % Assert new files have correct file extension
+    NewFiles = UpdatedFiles -- Files,
+    lists:foreach(fun(Filename) ->
+                          ".bggg" = filename:extension(Filename)
+                  end, NewFiles),
+
+
+    % Should behave the same when run a second time
+    ok = eflambe:capture({arithmetic, multiply, 2}, 1, Options),
+
+    12 = arithmetic:multiply(4, 3),
 
     ok = application:stop(eflambe).

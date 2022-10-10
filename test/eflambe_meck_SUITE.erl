@@ -21,6 +21,7 @@
 %% test cases
 -export([
          shim/1,
+         shim_same_module_twice/1,
          unload/1
         ]).
 
@@ -29,6 +30,7 @@
 all() ->
     [
      shim,
+     shim_same_module_twice,
      unload
     ].
 
@@ -84,9 +86,27 @@ shim(_Config) ->
     ok = eflambe_meck:shim(arithmetic, divide, 2, ShimFun),
 
     % It raise an exit when passed a module that has already been mocked
-    {'EXIT', {{already_started,_}, _}} = (catch eflambe_meck:shim(arithmetic, divide, 2, ShimFun)),
+    {error, already_mecked} = eflambe_meck:shim(arithmetic, divide, 2, ShimFun),
 
     meck:unload(arithmetic).
+
+shim_same_module_twice(_Config) ->
+    ShimFun = fun([X, Y]) ->
+                      meck:passthrough([X, Y])
+              end,
+
+    % It succeeds when passed valid arguments
+    ok = eflambe_meck:shim(arithmetic, divide, 2, ShimFun),
+
+    % It raise an exit when passed a module that has already been mocked
+    {error, already_mecked} = eflambe_meck:shim(arithmetic, divide, 2, ShimFun),
+
+    % It succeeds when passed a different module
+    ok = eflambe_meck:shim(helloworld, greet, 1, ShimFun),
+
+    meck:unload(helloworld),
+    meck:unload(arithmetic).
+
 
 unload(_Config) ->
     % It throws an error when module is not mocked

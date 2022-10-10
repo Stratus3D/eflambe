@@ -21,17 +21,22 @@
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec shim(atom(), atom(), integer(), fun()) -> ok.
+-spec shim(atom(), atom(), integer(), fun()) -> ok | {error, already_mecked}.
 
 shim(Module, Function, Arity, ShimFunction)
   when is_atom(Module), is_atom(Function), is_integer(Arity), is_function(ShimFunction)  ->
-    ok = meck:new(Module, [unstick, passthrough]),
+    try meck:new(Module, [unstick, passthrough]) of
+        ok ->
+            MockFun = gen_mock_fun(Arity, ShimFunction),
 
-    MockFun = gen_mock_fun(Arity, ShimFunction),
+            % Replace the original function with our new function that wraps the old
+            % function in profiling code.
+            meck:expect(Module, Function, MockFun)
+    catch
+        error:{already_started, _Pid} ->
+            {error, already_mecked}
+    end.
 
-    % Replace the original function with our new function that wraps the old
-    % function in profiling code.
-    meck:expect(Module, Function, MockFun).
 
 %%--------------------------------------------------------------------
 %% @doc
