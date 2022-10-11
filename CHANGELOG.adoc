@@ -1,0 +1,23 @@
+= Changelog
+
+== 0.2.5
+
+* Lock Rebar3 `project_plugins` to specific versions
+* Add Rebar3 settings for code coverage and xref
+* Small refactoring of code with more unit tests
+
+== 0.2.4
+
+Ignore garbage collection events for now.
+
+== 0.2.3
+
+Correct profiling of recursive function calls.
+
+== 0.2.2
+
+Applied some very early feedback received due to the publicity from SpawnFest. The primary fix being support for profiling functions of any arity.
+
+== 0.2.1
+
+First version completed during SpawnFest. I was figuring out how hex.pm worked, hence the odd first version.
