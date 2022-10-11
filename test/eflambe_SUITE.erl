@@ -23,6 +23,7 @@
 %% test cases
 -export([
          apply/1,
+         nested_apply/1,
          capture/1,
          capture_same_module/1,
          capture_and_apply_brendan_gregg/1,
@@ -34,6 +35,7 @@
 all() ->
     [
      apply,
+     nested_apply,
      capture,
      capture_same_module,
      capture_and_apply_brendan_gregg,
@@ -102,12 +104,28 @@ apply(_Config) ->
     Options = [{output_format, plain}],
 
     % Shouldn't crash when invoked
-    eflambe:apply({arithmetic, multiply, [2, 3]}, Options),
+    6 = eflambe:apply({arithmetic, multiply, [2, 3]}, Options),
 
     % Should behave the same when run a second time
-    eflambe:apply({arithmetic, multiply, [2, 3]}, Options),
+    9 = eflambe:apply({arithmetic, multiply, [3, 3]}, Options),
 
     ok = application:stop(eflambe).
+
+nested_apply(_Config) ->
+    Options = [{output_format, plain}],
+
+    % Shouldn't crash when invoked, and returns functions return value
+    8 = eflambe:apply({fun() ->
+                               arithmetic:multiply(2, 4)
+                       end, []}, Options),
+
+    % Should behave the same when run a second time
+    12 = eflambe:apply({fun() ->
+                               arithmetic:multiply(3, 4)
+                       end, []}, Options),
+
+    ok = application:stop(eflambe).
+
 
 capture_and_apply_brendan_gregg(_Config) ->
     Options = [{output_format, brendan_gregg}],

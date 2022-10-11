@@ -11,7 +11,7 @@
 -export([capture/1, capture/2, capture/3,
          apply/1, apply/2]).
 
--type mfa_fun() :: {atom(), atom(), list()} | fun().
+-type mfa_fun() :: {atom(), atom(), list()} | {fun(), list()}.
 
 -type program() :: hotspot | speedscope.
 -type option() :: {output_directory, binary()} | {output_format, brendan_gregg} | {open, program()}.
