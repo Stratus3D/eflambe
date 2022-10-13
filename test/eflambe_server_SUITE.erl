@@ -21,8 +21,8 @@
 %% test cases
 -export([
          start_link/1,
-         start_trace/1,
-         stop_trace/1
+         start_capture_trace/1,
+         stop_capture_trace/1
         ]).
 
 -include_lib("common_test/include/ct.hrl").
@@ -30,8 +30,8 @@
 all() ->
     [
      start_link,
-     start_trace,
-     stop_trace
+     start_capture_trace,
+     stop_capture_trace
     ].
 
 suite() ->
@@ -60,7 +60,6 @@ init_per_group(_Groupname, Config) ->
     Config.
 
 end_per_group(_Groupname, _Config) ->
-
     ok.
 
 
@@ -78,55 +77,54 @@ end_per_testcase(_TestCase, _Config) ->
 %%%===================================================================
 
 start_link(_Config) ->
-    {ok, Pid} = eflambe_server:start_link(),
-    true = is_pid(Pid).
+    {ok, Pid} = eflambe_server:start_link({arithmetic, multiply, 2}, [{max_calls, 1}]),
+    true = is_pid(Pid),
 
-start_trace(_Config) ->
-    Options = [{output_format, plain}],
+    eflambe_server:stop_capture_trace(Pid).
 
-    % Returns an error when eflambe_server isn't running
-    {'EXIT', {noproc, {gen_server, call, _}}} =
-    (catch eflambe_server:start_trace(foobar, 1, Options)),
+start_capture_trace(_Config) ->
+    Options = [{max_calls, 1}, {output_format, plain}],
+    Self = self(),
 
     % Returns an ok tuple when eflambe_server is running and arguments are valid
-    {ok, _Pid} = eflambe_server:start_link(),
-    [] = get_gen_server_state(),
-    {ok, foobar, true, TracerPid} = eflambe_server:start_trace(foobar, 1, Options),
+    {ok, Pid} = eflambe_server:start_link({arithmetic, multiply, 2}, Options),
+    {state,arithmetic,1,0, FinalOptions, []} = get_server_state(Pid),
+
+    {ok, true} = eflambe_server:start_capture_trace(Pid),
 
     % Stores trace state
-    [{trace, foobar, 1, 1, true, TracerPid, Options}] = get_gen_server_state(),
+    {state, arithmetic, 1, 1, FinalOptions, [{pid_trace, Self, _Tracer}]} = State =
+      get_server_state(Pid),
 
     % Returns the same trace data when called twice
-    {ok, foobar, false, _TracerPid} = eflambe_server:start_trace(foobar, 1, Options),
-    [{trace, foobar, 1, 1, true, TracerPid, Options}] = get_gen_server_state(),
+    {ok, false} = eflambe_server:start_capture_trace(Pid),
+    State = get_server_state(Pid),
 
     % Returns false when trace is stopped but number of calls has already been reached
-    {ok, true} = eflambe_server:stop_trace(foobar),
-    {ok, foobar, false, _TracerPid} = eflambe_server:start_trace(foobar, 1, Options),
+    ok = eflambe_server:stop_capture_trace(Pid).
 
-    [{trace, foobar, 1, 1, false, TracerPid, Options}] = get_gen_server_state().
+stop_capture_trace(_Config) ->
+    Options = [{max_calls, 2}, {output_format, plain}],
+    Self = self(),
 
-stop_trace(_Config) ->
-    Options = [{output_format, plain}],
-
-    % Returns an error when eflambe_server isn't running
-    {'EXIT', {noproc, {gen_server, call, _}}} = (catch eflambe_server:stop_trace(foobar)),
-
-    % Returns an error tuple when server is running but trace does not exist
-    {ok, _Pid} = eflambe_server:start_link(),
-    {error, unknown_trace} = eflambe_server:stop_trace(foobar),
+    {ok, Pid} = eflambe_server:start_link({arithmetic, multiply, 2}, Options),
 
     % Returns an ok tuple when eflambe_server is running and arguments are valid
-    {ok, foobar, true, TracerPid} = eflambe_server:start_trace(foobar, 1, Options),
-    {ok, true} = eflambe_server:stop_trace(foobar),
+    {ok, true} = eflambe_server:start_capture_trace(Pid),
 
-    % Updates trace state on the server
-    [{trace, foobar, 1, 1, false, TracerPid, Options}] = get_gen_server_state().
+    % Stores trace state
+    {state, arithmetic, 2, 1, FinalOptions, [{pid_trace, Self, _}]} = get_server_state(Pid),
 
-get_gen_server_state() ->
-    get_gen_server_state(eflambe_server).
+    % When called removes trace from server state
+    ok = eflambe_server:stop_capture_trace(Pid),
+    {state, arithmetic, 2, 1, FinalOptions, []} = get_server_state(Pid),
 
-get_gen_server_state(Name) ->
-    {status, _, _, State} = sys:get_status(Name),
-    [[_, _, {data, [{"State", {state, ServerState}}]}]|_] = lists:reverse(State),
+    % After being called start_capture_trace invoked in the same process returns
+    % true to kick off a new trace
+    {ok, true} = eflambe_server:start_capture_trace(Pid),
+    ok = eflambe_server:stop_capture_trace(Pid).
+
+get_server_state(Pid) ->
+    {status, _, _, State} = sys:get_status(Pid),
+    [[_, _, {data, [{"State", ServerState}]}]|_] = lists:reverse(State),
     ServerState.

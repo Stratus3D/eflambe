@@ -1,7 +1,7 @@
 %%%-------------------------------------------------------------------
 %%% @doc
-%%% E flambe server stores state for all traces that have been started. When
-%%% No traces remain the server will shut down automatically.
+%%% E flambe server stores state for a capture trace that has been started.
+%%% When no traced processes remain the server shuts down automatically.
 %%% @end
 %%%-------------------------------------------------------------------
 -module(eflambe_server).
@@ -9,33 +9,44 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/0, start_trace/3, stop_trace/1]).
+-export([start_link/2, start_capture_trace/1, stop_capture_trace/1, start_trace/1, stop_trace/1]).
 
 %% gen_server callbacks
 -export([init/1,
          handle_call/3,
          handle_cast/2,
+         handle_continue/2,
          handle_info/2]).
 
 -include_lib("kernel/include/logger.hrl").
 
--define(SERVER, ?MODULE).
+-define(DEFAULT_OPTIONS, [{output_format, brendan_gregg}]).
+-define(FLAGS, [call, return_to, running, procs, garbage_collection, arity,
+                timestamp, set_on_spawn]).
 
-
--record(state, {traces = [] :: [trace()]}).
-
--record(trace, {
-          id :: any(),
+-record(state, {
+          module :: atom(),
           max_calls :: integer(),
-          calls :: integer(),
-          running :: boolean(),
-          tracer :: pid(),
-          options = [] :: list()
+          calls = 0 :: integer(),
+          options = [] :: list(),
+          pid_traces = [] :: list(pid_trace())
+         }).
+
+% For capture traces we could end up tracing invocations in multiple processes.
+% We need to keep track of the processes that invoke the function so we can
+% track the state of the trace in function and properly handle recursive calls.
+% If recursive calls are not handled they will result in infinite number of
+% traces started.
+-record(pid_trace, {
+          pid :: pid(),
+          tracer_pid :: pid()
          }).
 
 -type state() :: #state{}.
--type trace() :: #trace{}.
+-type pid_trace() :: #pid_trace{}.
 -type from() :: {pid(), Tag :: term()}.
+
+-type tracer_options() :: [eflambe:option() | {pid, pid()} | {max_calls, pos_integer()}].
 
 %%%===================================================================
 %%% API
@@ -47,101 +58,180 @@
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec start_link() -> {ok, pid()} | ignore | {error, Error :: any()}.
+-spec start_link(mfa(), tracer_options()) ->
+    {ok, pid()} | ignore | {error, Error :: any()}.
 
-start_link() ->
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+start_link(MFA, Options) ->
+    gen_server:start_link(?MODULE, [MFA, Options], []).
 
--spec start_trace(reference(), integer(), list()) -> {ok, reference(), boolean(), pid()}.
+%%--------------------------------------------------------------------
+%% @doc
+%% Calls the eflambe_server gen_server to start a tracer for the current
+%% process. This is only used for `capture` style traces.
+%%
+%% @end
+%%--------------------------------------------------------------------
 
-start_trace(Id, MaxCalls, Options) ->
-    gen_server:call(?SERVER, {start_trace, Id, MaxCalls, Options}).
+-spec start_capture_trace(pid()) -> {ok, boolean()}.
 
--spec stop_trace(reference()) -> {ok, boolean()}.
+start_capture_trace(ServerPid) ->
+    case gen_server:call(ServerPid, start_trace) of
+        {ok, true, TracerPid} ->
+            % Create new trace record, start tracing function
+            start_erlang_trace(self(), TracerPid),
+            {ok, true};
+        {ok, false} ->
+            {ok, false}
+    end.
 
-stop_trace(Id) ->
-    gen_server:call(?SERVER, {stop_trace, Id}, infinity).
+%%--------------------------------------------------------------------
+%% @doc
+%% Calls the eflambe_server gen_server to stop a tracer for a specific
+%% process. This is only used for `capture` style traces.
+%%
+%% @end
+%%--------------------------------------------------------------------
+stop_capture_trace(ServerPid) ->
+    gen_server:call(ServerPid, stop_trace).
 
+%%--------------------------------------------------------------------
+%% @doc
+%% Starts the tracer in the current process (no gen_server). This is
+%% used for `apply` style traces only.
+%%
+%% @end
+%%--------------------------------------------------------------------
+
+-spec start_trace(tracer_options()) -> {ok, pid()}.
+
+start_trace(Options) ->
+    TracerOptions = [{pid, self()}|Options],
+    {ok, TracerPid} = eflambe_tracer:start_link(TracerOptions),
+
+    % Start the actual trace last so it doesn't pick up the above code
+    start_erlang_trace(self(), TracerPid),
+    {ok, TracerPid}.
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Stops a tracer and finishes a trace in the current process. This is
+%% used for `apply` style traces only as everything is done in the
+%% current process.
+%%
+%% @end
+%%--------------------------------------------------------------------
+stop_trace(TracerPid) ->
+    % Stop tracing immediately so it doesn't pick up the finish gen_server call!
+    stop_erlang_trace(self()),
+    eflambe_tracer:finish(TracerPid).
 
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
 
--spec init(Args :: list()) -> {ok, state()}.
+-spec init(Args :: list(tracer_options())) -> {ok, state()}.
 
-init([]) ->
-    {ok, #state{}}.
+init([{Module, Function, Arity}, Options]) ->
+    % Generate complete list of options by falling back to default list
+    FinalOptions = merge(Options, ?DEFAULT_OPTIONS),
+
+    % If necessary, set up meck to wrap original function in tracing code that
+    % calls out to this process. We'll need to inject the pid of this tracer
+    % (self()) into the wrapper function so we can track invocation and return
+    % of the function the user wants profiled
+    ServerPid = self(),
+    ShimmedFunction = fun(Args) ->
+        {ok, StartedNew} = eflambe_server:start_capture_trace(ServerPid),
+
+        % Invoke the original function
+        Results = meck:passthrough(Args),
+
+        case StartedNew of
+            true ->
+                eflambe_server:stop_capture_trace(ServerPid);
+            false ->
+                ok
+        end,
+        Results
+    end,
+
+    case eflambe_meck:shim(Module, Function, Arity, ShimmedFunction) of
+        {error, already_mecked} ->
+            {stop, already_mecked};
+        ok ->
+            MaxCalls = proplists:get_value(max_calls, FinalOptions),
+            {ok, #state{module = Module, max_calls = MaxCalls, options = FinalOptions}}
+    end.
 
 -spec handle_call(Request :: any(), from(), state()) ->
                                   {reply, Reply :: any(), state()} |
-                                  {reply, Reply :: any(), state(), timeout()}.
+                                  {reply, Reply :: any(), state(), {continue, finish}}.
 
-handle_call({start_trace, Id, CallLimit, Options}, {FromPid, _}, State) ->
-    TracerOptions = [{pid, FromPid}|Options],
-    case get_trace_by_id(State, Id) of
-        undefined ->
-            % Create new trace, spawn a tracer for the trace
-            {ok, TracerPid} = eflambe_tracer:start_link(TracerOptions),
-            UpdatedTrace = #trace{
-                              id = Id,
-                              max_calls = CallLimit,
-                              calls = 1,
-                              options = Options,
-                              running = true,
-                              tracer = TracerPid
-                             },
-            {reply, {ok, Id, true, TracerPid}, put_trace(State, UpdatedTrace)};
-        #trace{max_calls = MaxCalls, calls = Calls, tracer = TracerPid, running = false}
-          when Calls =:= MaxCalls ->
-            {reply, {ok, Id, false, TracerPid}, State};
-        #trace{max_calls = MaxCalls, calls = Calls, tracer = TracerPid, running = true}
-          when Calls =:= MaxCalls ->
-            {reply, {ok, Id, false, TracerPid}, State};
-        #trace{calls = Calls, running = false} = Trace ->
-            % Increment existing trace
+handle_call(start_trace, {FromPid, _}, #state{max_calls = MaxCalls, calls = Calls,
+                                              options = Options} = State) ->
+    NoTracesRemaining = (MaxCalls =:= Calls),
+
+    case {get_pid_trace(State, FromPid), NoTracesRemaining} of
+        {_, true} ->
+            {reply, {ok, false}, State};
+        {undefined, false} ->
+            % Increment number of calls
             NewCalls = Calls + 1,
-            % Create new trace, spawn a tracer for the trace
+
+            % Start a new tracer
+            TracerOptions = [{pid, FromPid}|Options],
             {ok, TracerPid} = eflambe_tracer:start_link(TracerOptions),
 
-            % Update number of calls
-            UpdatedTrace = Trace#trace{calls = NewCalls, running = true, tracer = TracerPid},
-            NewState = update_trace(State, Id, UpdatedTrace),
-            {reply, {ok, Id, true, TracerPid}, NewState};
-        #trace{options = Options, running = true, tracer = TracerPid} ->
-            {reply, {ok, Id, false, TracerPid}, State}
+            % Update state
+            NewPidTrace = #pid_trace{ pid = FromPid, tracer_pid = TracerPid},
+            NewState = put_pid_trace(State#state{calls = NewCalls}, NewPidTrace),
+
+            {reply, {ok, true, TracerPid}, NewState};
+        {#pid_trace{}, false} ->
+            {reply, {ok, false}, State}
     end;
 
-handle_call({stop_trace, Id}, _From, State) ->
-    case get_trace_by_id(State, Id) of
+handle_call(stop_trace, {FromPid, _}, #state{max_calls = MaxCalls, calls = Calls,
+                                             module = ModuleName,
+                                             pid_traces = PidTraces} = State) ->
+    % Stop tracing immediately!
+    stop_erlang_trace(FromPid),
+
+    NewTraces = case get_pid_trace(State, FromPid) of
+        #pid_trace{tracer_pid = TracerPid} ->
+            eflambe_tracer:finish(TracerPid),
+
+            % Generate new list of traces
+            remove_pid_trace(State, FromPid);
         undefined ->
-            % No trace found
-            {reply, {error, unknown_trace}, State};
-        #trace{id = Id, max_calls = MaxCalls, calls = Calls, options = Options,
-               running = Running, tracer = TracerPid} = Trace ->
-            case Calls =:= MaxCalls of
-                true ->
-                    ok = maybe_unload_meck(Options),
-                    io:format("Successful finished trace~n");
-                false -> ok
-            end,
+            PidTraces
+    end,
 
-            Changed = case Running of
-                          true ->
-                              ok = eflambe_tracer:finish(TracerPid),
-                              true;
-                          false -> false
-                      end,
+    NoTracesRemaining = (MaxCalls =:= Calls),
 
-            NewState = update_trace(State, Id, Trace#trace{running = false}),
-            {reply, {ok, Changed}, NewState}
+    case {NoTracesRemaining, NewTraces} of
+        {true, []} ->
+            % We are completely finished
+            ok = eflambe_meck:unload(ModuleName),
+
+            io:format("Successful finished trace~n"),
+
+            % The only reason we don't stop here is because this is a call and
+            % the linked call would crash as well. This feels kind of wrong so
+            % I may revisit this
+            {reply, ok, State, {continue, finish}};
+        {_, _} ->
+            % Still some stuff in flight
+            {reply, ok, State#state{pid_traces = NewTraces}}
     end.
 
--spec handle_cast(any(), state()) -> {noreply, state()} |
-                                 {noreply, state(), timeout()} |
-                                 {stop, Reason :: any(), state()}.
+-spec handle_cast(any(), state()) -> {noreply, state()}.
 
 handle_cast(_Msg, State) ->
     {noreply, State}.
+
+handle_continue(finish, State) ->
+    {stop, normal, State}.
 
 -spec handle_info(Info :: any(), state()) -> {noreply, state()} |
                                   {noreply, state(), timeout()} |
@@ -155,29 +245,41 @@ handle_info(Info, State) ->
 %%% Internal functions
 %%%===================================================================
 
-get_trace_by_id(#state{traces = Traces}, Id) ->
-    case lists:filter(lookup_fun(Id), Traces) of
+get_pid_trace(#state{pid_traces = Traces}, Pid) ->
+    case lists:filter(lookup_fun(Pid), Traces) of
         [] -> undefined;
         [Trace] -> Trace
     end.
 
-put_trace(#state{traces = ExistingTraces} = State, NewTrace) ->
-    State#state{traces = [NewTrace|ExistingTraces]}.
+put_pid_trace(#state{pid_traces = ExistingTraces} = State, NewTrace) ->
+    State#state{pid_traces = [NewTrace|ExistingTraces]}.
 
-update_trace(#state{traces = ExistingTraces} = State, Id, UpdatedTrace) ->
-    {[_Trace], Rest} = lists:partition(lookup_fun(Id), ExistingTraces),
-    State#state{traces = [UpdatedTrace|Rest]}.
+remove_pid_trace(#state{pid_traces = Traces}, Pid) ->
+    SelectionFun = lookup_fun(Pid),
+    lists:filter(fun(Trace) -> not SelectionFun(Trace) end, Traces).
 
-lookup_fun(Id) ->
+lookup_fun(Pid) ->
     fun
-        (#trace{id = TraceId}) when TraceId =:= Id -> true;
+        (#pid_trace{pid = TracedPid}) when TracedPid =:= Pid -> true;
         (_) -> false
     end.
 
-maybe_unload_meck(Options) ->
-    case proplists:get_value(meck, Options) of
-        undefined -> ok;
-        ModuleName ->
-            % Unload if module has been mecked
-            ok = meck:unload(ModuleName)
-    end.
+% https://stackoverflow.com/questions/21873644/combine-merge-two-erlang-lists
+merge(In1, In2) ->
+    Combined = In1 ++ In2,
+    Fun = fun(Key) ->
+                  [FinalValue|_] = proplists:get_all_values(Key, Combined),
+                  {Key, FinalValue}
+          end,
+    lists:map(Fun, proplists:get_keys(Combined)).
+
+-spec start_erlang_trace(PidToTrace :: pid(), TracerPid :: pid()) -> integer().
+
+start_erlang_trace(PidToTrace, TracerPid) ->
+    MatchSpec = [{'_', [], [{message, {{cp, {caller}}}}]}],
+    erlang:trace_pattern(on_load, MatchSpec, [local]),
+    erlang:trace_pattern({'_', '_', '_'}, MatchSpec, [local]),
+    erlang:trace(PidToTrace, true, [{tracer, TracerPid} | ?FLAGS]).
+
+stop_erlang_trace(PidToTrace) ->
+    erlang:trace(PidToTrace, false, [all]).

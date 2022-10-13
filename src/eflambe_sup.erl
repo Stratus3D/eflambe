@@ -8,7 +8,7 @@
 -behaviour(supervisor).
 
 % API
--export([start_link/0, get_or_start_server/0]).
+-export([start_link/0, start_trace/2]).
 
 %% supervisor callbacks
 -export([init/1]).
@@ -20,21 +20,17 @@
 start_link() ->
     supervisor:start_link({local, ?SERVER}, ?MODULE, []).
 
--spec get_or_start_server() -> {ok, pid()}.
+-spec start_trace(MFA :: mfa(), Options :: list()) -> {ok, pid()} | {error, already_mecked}.
 
-get_or_start_server() ->
-    case supervisor:restart_child(?SERVER, eflambe_server) of
-        {error, running} ->
-            {ok, whereis(eflambe_server)};
-        {ok, Server} -> {ok, Server}
-    end.
+start_trace(MFA, Options) ->
+    supervisor:start_child(?SERVER, [MFA, Options]).
 
 %%%===================================================================
 %%% supervisor callbacks
 %%%===================================================================
 
 init([]) ->
-    SupFlags = #{strategy => one_for_one,
+    SupFlags = #{strategy => simple_one_for_one,
                  intensity => 1,
                  period => 5},
 
