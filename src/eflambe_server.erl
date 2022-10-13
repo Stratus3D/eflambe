@@ -75,7 +75,14 @@ start_link(MFA, Options) ->
 -spec start_capture_trace(pid()) -> {ok, boolean()}.
 
 start_capture_trace(ServerPid) ->
-    gen_server:call(ServerPid, start_trace).
+    case gen_server:call(ServerPid, start_trace) of
+        {ok, true, TracerPid} ->
+            % Create new trace record, start tracing function
+            start_erlang_trace(self(), TracerPid),
+            {ok, true};
+        {ok, false} ->
+            {ok, false}
+    end.
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -179,9 +186,7 @@ handle_call(start_trace, {FromPid, _}, #state{max_calls = MaxCalls, calls = Call
             NewPidTrace = #pid_trace{ pid = FromPid, tracer_pid = TracerPid},
             NewState = put_pid_trace(State#state{calls = NewCalls}, NewPidTrace),
 
-            % Create new trace record, start tracing function
-            start_erlang_trace(FromPid, TracerPid),
-            {reply, {ok, true}, NewState};
+            {reply, {ok, true, TracerPid}, NewState};
         {#pid_trace{}, false} ->
             {reply, {ok, false}, State}
     end;
