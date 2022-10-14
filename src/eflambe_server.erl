@@ -20,7 +20,6 @@
 
 -include_lib("kernel/include/logger.hrl").
 
--define(DEFAULT_OPTIONS, [{output_format, brendan_gregg}]).
 -define(FLAGS, [call, return_to, running, procs, garbage_collection, arity,
                 timestamp, set_on_spawn]).
 
@@ -132,9 +131,6 @@ stop_trace(TracerPid) ->
 -spec init(Args :: list(tracer_options())) -> {ok, state()}.
 
 init([{Module, Function, Arity}, Options]) ->
-    % Generate complete list of options by falling back to default list
-    FinalOptions = merge(Options, ?DEFAULT_OPTIONS),
-
     % If necessary, set up meck to wrap original function in tracing code that
     % calls out to this process. We'll need to inject the pid of this tracer
     % (self()) into the wrapper function so we can track invocation and return
@@ -159,8 +155,8 @@ init([{Module, Function, Arity}, Options]) ->
         {error, already_mecked} ->
             {stop, already_mecked};
         ok ->
-            MaxCalls = proplists:get_value(max_calls, FinalOptions),
-            {ok, #state{module = Module, max_calls = MaxCalls, options = FinalOptions}}
+            MaxCalls = proplists:get_value(max_calls, Options),
+            {ok, #state{module = Module, max_calls = MaxCalls, options = Options}}
     end.
 
 -spec handle_call(Request :: any(), from(), state()) ->
@@ -263,15 +259,6 @@ lookup_fun(Pid) ->
         (#pid_trace{pid = TracedPid}) when TracedPid =:= Pid -> true;
         (_) -> false
     end.
-
-% https://stackoverflow.com/questions/21873644/combine-merge-two-erlang-lists
-merge(In1, In2) ->
-    Combined = In1 ++ In2,
-    Fun = fun(Key) ->
-                  [FinalValue|_] = proplists:get_all_values(Key, Combined),
-                  {Key, FinalValue}
-          end,
-    lists:map(Fun, proplists:get_keys(Combined)).
 
 -spec start_erlang_trace(PidToTrace :: pid(), TracerPid :: pid()) -> integer().
 

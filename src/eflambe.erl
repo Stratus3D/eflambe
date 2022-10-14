@@ -14,8 +14,15 @@
 -type mfa_fun() :: {atom(), atom(), list()} | {fun(), list()}.
 
 -type program() :: hotspot | speedscope.
--type option() :: {output_directory, binary()} | {output_format, brendan_gregg} | {open, program()}.
+-type option() :: {return, value | flamegraph | filename}
+                | {output_directory, binary()}
+                | {output_format, brendan_gregg}
+                | {open, program()}.
 -type options() :: [option()].
+
+-define(DEFAULT_OPTIONS, [{output_format, brendan_gregg}]).
+-define(DEFAULT_APPLY_OPTIONS, [{return, value}|?DEFAULT_OPTIONS]).
+-define(DEFAULT_CAPTURE_OPTIONS, [{return, filename}|?DEFAULT_OPTIONS]).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -37,13 +44,13 @@ capture(MFA, NumCalls) ->
     capture(MFA, NumCalls, []).
 
 -spec capture(MFA :: mfa(), NumCalls :: pos_integer(), Options :: options()) ->
-    ok | {error, already_mecked}.
+    {ok, binary() | [any()]}  | {error, already_mecked}.
 
 capture({Module, Function, Arity}, NumCalls, Options)
   when is_atom(Module), is_atom(Function), is_integer(Arity) ->
-    setup_for_trace(),
+    CompleteOptions = merge([{max_calls, NumCalls}|Options], ?DEFAULT_CAPTURE_OPTIONS),
 
-    CompleteOptions = [{max_calls, NumCalls}|Options],
+    setup_for_trace(),
 
     case eflambe_sup:start_trace({Module, Function, Arity}, CompleteOptions) of
         {ok, _Pid} -> ok;
@@ -66,8 +73,10 @@ apply(Function) ->
 -spec apply(Function :: mfa_fun(), Options :: options()) -> any().
 
 apply({Module, Function, Args}, Options) when is_atom(Module), is_atom(Function), is_list(Args) ->
+    CompleteOptions = merge(Options, ?DEFAULT_APPLY_OPTIONS),
+
     setup_for_trace(),
-    {ok, TracePid} = eflambe_server:start_trace(Options),
+    {ok, TracePid} = eflambe_server:start_trace(CompleteOptions),
 
     % Invoke the original function
     Results = erlang:apply(Module, Function, Args),
@@ -76,8 +85,10 @@ apply({Module, Function, Args}, Options) when is_atom(Module), is_atom(Function)
     Results;
 
 apply({Function, Args}, Options) when is_function(Function), is_list(Args) ->
+    CompleteOptions = merge(Options, ?DEFAULT_APPLY_OPTIONS),
+
     setup_for_trace(),
-    {ok, TracePid} = eflambe_server:start_trace(Options),
+    {ok, TracePid} = eflambe_server:start_trace(CompleteOptions),
 
     % Invoke the original function
     Results = erlang:apply(Function, Args),
@@ -91,3 +102,12 @@ apply({Function, Args}, Options) when is_function(Function), is_list(Args) ->
 
 setup_for_trace() ->
     application:ensure_all_started(eflambe).
+
+% https://stackoverflow.com/questions/21873644/combine-merge-two-erlang-lists
+merge(In1, In2) ->
+    Combined = In1 ++ In2,
+    Fun = fun(Key) ->
+                  [FinalValue|_] = proplists:get_all_values(Key, Combined),
+                  {Key, FinalValue}
+          end,
+    lists:map(Fun, proplists:get_keys(Combined)).
