@@ -159,9 +159,13 @@ multiple_captures(_Config) ->
     NumFiles = length(Files),
 
     % Capturing multiple calls should result in multiple output files
-    ok = eflambe:capture({arithmetic, multiply, 2}, 2, Options),
-    12 = arithmetic:multiply(4, 3),
-    20 = arithmetic:multiply(5, 4),
+    spawn_link(fun() ->
+                  timer:sleep(100),
+                  12 = arithmetic:multiply(4, 3),
+                  20 = arithmetic:multiply(5, 4)
+               end),
+
+    {ok, [_Filename1, _Filename2]} = eflambe:capture({arithmetic, multiply, 2}, 2, Options),
 
     % Both write separate trace files
     {ok, UpdatedFiles} = file:list_dir("."),
