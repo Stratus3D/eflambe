@@ -35,7 +35,6 @@ start_trace(MFA, Options) ->
         {ok, _Child} ->
             receive
                 {Ref, Msg} ->
-                    io:format("Msg: ~p~n", [Msg]),
                     {ok, Msg}
             end;
         {error, _} = Error -> Error

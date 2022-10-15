@@ -9,7 +9,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/2, start_capture_trace/1, stop_capture_trace/1, start_trace/1, stop_trace/1]).
+-export([start_link/2, start_capture_trace/1, stop_capture_trace/2, start_trace/1, stop_trace/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -30,7 +30,8 @@
           calls = 0 :: integer(),
           options = [] :: list(),
           pid_traces = [] :: list(pid_trace()),
-          results = [] :: list()
+          results = [] :: list(),
+          return :: atom()
          }).
 
 % For capture traces we could end up tracing invocations in multiple processes.
@@ -92,8 +93,11 @@ start_capture_trace(ServerPid) ->
 %%
 %% @end
 %%--------------------------------------------------------------------
-stop_capture_trace(ServerPid) ->
-    gen_server:call(ServerPid, stop_trace).
+
+-spec stop_capture_trace(pid(), any()) -> ok.
+
+stop_capture_trace(ServerPid, Return) ->
+    gen_server:call(ServerPid, {stop_trace, Return}).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -146,7 +150,7 @@ init([{Module, Function, Arity}, Options]) ->
 
         case StartedNew of
             true ->
-                eflambe_server:stop_capture_trace(ServerPid);
+                eflambe_server:stop_capture_trace(ServerPid, Results);
             false ->
                 ok
         end,
@@ -159,7 +163,15 @@ init([{Module, Function, Arity}, Options]) ->
         ok ->
             MaxCalls = proplists:get_value(max_calls, Options),
             Callback = proplists:get_value(callback, Options),
-            {ok, #state{callback = Callback, module = Module, max_calls = MaxCalls, options = Options}}
+            Return = proplists:get_value(return, Options),
+            InitialState = #state{
+                              callback = Callback,
+                              module = Module,
+                              max_calls = MaxCalls,
+                              options = Options,
+                              return = Return
+                             },
+            {ok, InitialState}
     end.
 
 -spec handle_call(Request :: any(), from(), state()) ->
@@ -190,38 +202,46 @@ handle_call(start_trace, {FromPid, _}, #state{max_calls = MaxCalls, calls = Call
             {reply, {ok, false}, State}
     end;
 
-handle_call(stop_trace, {FromPid, _}, #state{max_calls = MaxCalls, calls = Calls,
+handle_call({stop_trace, Return}, {FromPid, _}, #state{max_calls = MaxCalls, calls = Calls,
                                              module = ModuleName,
-                                             pid_traces = PidTraces} = State) ->
+                                             results = Results,
+                                             return = ReturnOption} = State) ->
     % Stop tracing immediately!
     stop_erlang_trace(FromPid),
 
-    NewTraces = case get_pid_trace(State, FromPid) of
+    case get_pid_trace(State, FromPid) of
         #pid_trace{tracer_pid = TracerPid} ->
-            eflambe_tracer:finish(TracerPid),
+            {ok, Result} = eflambe_tracer:finish(TracerPid),
+
+            FinalResult = case ReturnOption of
+                              value -> Return;
+                              _ -> Result
+                          end,
 
             % Generate new list of traces
-            remove_pid_trace(State, FromPid);
+            NewTraces = remove_pid_trace(State, FromPid),
+
+            NoTracesRemaining = (MaxCalls =:= Calls),
+
+            NewState = State#state{pid_traces = NewTraces, results = [FinalResult|Results]},
+
+            case {NoTracesRemaining, NewTraces} of
+                {true, []} ->
+                    % We are completely finished
+                    ok = eflambe_meck:unload(ModuleName),
+
+                    io:format("Successful finished trace~n"),
+
+                    % The only reason we don't stop here is because this is a call and
+                    % the linked call would crash as well. This feels kind of wrong so
+                    % I may revisit this
+                    {reply, ok, NewState, {continue, finish}};
+                {_, _} ->
+                    % Still some stuff in flight
+                    {reply, ok, NewState}
+            end;
         undefined ->
-            PidTraces
-    end,
-
-    NoTracesRemaining = (MaxCalls =:= Calls),
-
-    case {NoTracesRemaining, NewTraces} of
-        {true, []} ->
-            % We are completely finished
-            ok = eflambe_meck:unload(ModuleName),
-
-            io:format("Successful finished trace~n"),
-
-            % The only reason we don't stop here is because this is a call and
-            % the linked call would crash as well. This feels kind of wrong so
-            % I may revisit this
-            {reply, ok, State, {continue, finish}};
-        {_, _} ->
-            % Still some stuff in flight
-            {reply, ok, State#state{pid_traces = NewTraces}}
+            {reply, ok, State}
     end.
 
 -spec handle_cast(any(), state()) -> {noreply, state()}.
@@ -230,7 +250,7 @@ handle_cast(_Msg, State) ->
     {noreply, State}.
 
 handle_continue(finish, #state{callback = PidRef, results = Results} = State) ->
-    ok = gen_server:reply(PidRef, Results),
+    ok = gen_server:reply(PidRef, lists:reverse(Results)),
     {stop, normal, State}.
 
 -spec handle_info(Info :: any(), state()) -> {noreply, state()} |

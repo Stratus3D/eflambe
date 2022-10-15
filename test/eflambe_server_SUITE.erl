@@ -80,32 +80,36 @@ start_link(_Config) ->
     {ok, Pid} = eflambe_server:start_link({arithmetic, multiply, 2}, [{max_calls, 1}]),
     true = is_pid(Pid),
 
-    eflambe_server:stop_capture_trace(Pid).
+    eflambe_server:stop_capture_trace(Pid, return_value).
 
 start_capture_trace(_Config) ->
-    Options = [{max_calls, 1}, {output_format, plain}],
     Self = self(),
+    Ref = make_ref(),
+    Options = [{callback, {Self, Ref}}, {max_calls, 1}, {output_format, plain}, {return, filename}],
 
     % Returns an ok tuple when eflambe_server is running and arguments are valid
     {ok, Pid} = eflambe_server:start_link({arithmetic, multiply, 2}, Options),
-    {state,arithmetic,1,0, FinalOptions, []} = get_server_state(Pid),
+    {state, {Self, Ref}, arithmetic, 1, 0, FinalOptions, [], [], filename} = get_server_state(Pid),
 
     {ok, true} = eflambe_server:start_capture_trace(Pid),
 
     % Stores trace state
-    {state, arithmetic, 1, 1, FinalOptions, [{pid_trace, Self, _Tracer}]} = State =
-      get_server_state(Pid),
+    State = get_server_state(Pid),
+    {state, {Self, Ref},  arithmetic, 1, 1, FinalOptions, Traces, [], filename} = State,
+    [{pid_trace, Self, _Tracer}] = Traces,
 
     % Returns the same trace data when called twice
     {ok, false} = eflambe_server:start_capture_trace(Pid),
     State = get_server_state(Pid),
 
     % Returns false when trace is stopped but number of calls has already been reached
-    ok = eflambe_server:stop_capture_trace(Pid).
+    ok = eflambe_server:stop_capture_trace(Pid, return_value).
 
 stop_capture_trace(_Config) ->
-    Options = [{max_calls, 2}, {output_format, plain}],
     Self = self(),
+    Ref = make_ref(),
+    Reply = {Self, Ref},
+    Options = [{callback, Reply}, {max_calls, 2}, {output_format, plain}, {return, filename}],
 
     {ok, Pid} = eflambe_server:start_link({arithmetic, multiply, 2}, Options),
 
@@ -113,16 +117,18 @@ stop_capture_trace(_Config) ->
     {ok, true} = eflambe_server:start_capture_trace(Pid),
 
     % Stores trace state
-    {state, arithmetic, 2, 1, FinalOptions, [{pid_trace, Self, _}]} = get_server_state(Pid),
+    {state, Reply, arithmetic, 2, 1, FinalOptions, Traces, [], filename} = get_server_state(Pid),
+    [{pid_trace, Self, _}] = Traces,
 
     % When called removes trace from server state
-    ok = eflambe_server:stop_capture_trace(Pid),
-    {state, arithmetic, 2, 1, FinalOptions, []} = get_server_state(Pid),
+    ok = eflambe_server:stop_capture_trace(Pid, return_value),
+    State = get_server_state(Pid),
+    {state, Reply, arithmetic, 2, 1, FinalOptions, [], [_Filename], filename} = State,
 
     % After being called start_capture_trace invoked in the same process returns
     % true to kick off a new trace
     {ok, true} = eflambe_server:start_capture_trace(Pid),
-    ok = eflambe_server:stop_capture_trace(Pid).
+    ok = eflambe_server:stop_capture_trace(Pid, return_value).
 
 get_server_state(Pid) ->
     {status, _, _, State} = sys:get_status(Pid),

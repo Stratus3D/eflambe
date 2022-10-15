@@ -20,6 +20,8 @@
                 | {open, program()}.
 -type options() :: [option()].
 
+-type capture_return() :: {ok, [any()]} | {error, already_mecked}.
+
 -define(DEFAULT_OPTIONS, [{output_format, brendan_gregg}]).
 -define(DEFAULT_APPLY_OPTIONS, [{return, value}|?DEFAULT_OPTIONS]).
 -define(DEFAULT_CAPTURE_OPTIONS, [{return, filename}|?DEFAULT_OPTIONS]).
@@ -33,18 +35,18 @@
 %% @end
 %%--------------------------------------------------------------------
 
--spec capture(MFA :: mfa()) -> ok.
+-spec capture(MFA :: mfa()) -> capture_return().
 
 capture(MFA) ->
     capture(MFA, 1).
 
--spec capture(MFA :: mfa(), NumCalls :: pos_integer()) -> ok.
+-spec capture(MFA :: mfa(), NumCalls :: pos_integer()) -> capture_return().
 
 capture(MFA, NumCalls) ->
     capture(MFA, NumCalls, []).
 
 -spec capture(MFA :: mfa(), NumCalls :: pos_integer(), Options :: options()) ->
-    {ok, binary() | [any()]}  | {error, already_mecked}.
+    capture_return().
 
 capture({Module, Function, Arity}, NumCalls, Options)
   when is_atom(Module), is_atom(Function), is_integer(Arity) ->
@@ -52,10 +54,7 @@ capture({Module, Function, Arity}, NumCalls, Options)
 
     setup_for_trace(),
 
-    case eflambe_sup:start_trace({Module, Function, Arity}, CompleteOptions) of
-        {ok, _Pid} -> ok;
-        {error, _} = Error -> Error
-    end.
+    eflambe_sup:start_trace({Module, Function, Arity}, CompleteOptions).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -81,7 +80,7 @@ apply({Module, Function, Args}, Options) when is_atom(Module), is_atom(Function)
     % Invoke the original function
     Results = erlang:apply(Module, Function, Args),
 
-    ok = eflambe_server:stop_trace(TracePid),
+    {ok, _} = eflambe_server:stop_trace(TracePid),
     Results;
 
 apply({Function, Args}, Options) when is_function(Function), is_list(Args) ->
@@ -93,7 +92,7 @@ apply({Function, Args}, Options) when is_function(Function), is_list(Args) ->
     % Invoke the original function
     Results = erlang:apply(Function, Args),
 
-    ok = eflambe_server:stop_trace(TracePid),
+    {ok, _} = eflambe_server:stop_trace(TracePid),
     Results.
 
 %%%===================================================================
