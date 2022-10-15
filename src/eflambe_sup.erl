@@ -20,7 +20,7 @@
 start_link() ->
     supervisor:start_link({local, ?SERVER}, ?MODULE, []).
 
--spec start_trace(MFA :: mfa(), Options :: list()) -> {ok, pid()} | {error, already_mecked}.
+-spec start_trace(MFA :: mfa(), Options :: list()) -> {ok, [any()]} | {error, already_mecked}.
 
 start_trace(MFA, Options) ->
     % This feels hacky but we MAY need the gen_server to send us all the results
