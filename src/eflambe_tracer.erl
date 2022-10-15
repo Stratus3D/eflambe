@@ -31,7 +31,8 @@
           impl :: atom(),
           impl_state :: any(),
           options :: eflambe:options(),
-          filename :: file:filename_all()
+          filename :: file:filename_all(),
+          return :: atom()
          }).
 
 -type state() :: #state{}.
@@ -81,16 +82,25 @@ init([Options]) ->
     Filename = generate_filename(Ext),
     FullFilename = filename:join([output_directory(Options), Filename]),
 
+    Return = proplists:get_value(return, FinalOptions),
+
     % Initialize implementation state
     {ok, State} = erlang:apply(Impl, init, [FullFilename, Options]),
-    {ok, #state{impl = Impl, impl_state = State, options = FinalOptions, filename = FullFilename}}.
+    InitialState = #state{
+                      impl = Impl,
+                      impl_state = State,
+                      options = FinalOptions,
+                      filename = FullFilename,
+                      return = Return
+                     },
+    {ok, InitialState}.
 
 -spec handle_call(Request :: any(), from(), state()) ->
                                   {reply, Reply :: any(), state()} |
                                   {reply, Reply :: any(), state(), {continue, finish}}.
 
 handle_call(finish, _From, #state{impl = Impl, impl_state = ImplState, options = Options,
-                                 filename = Filename} = State) ->
+                                 filename = Filename, return = Return} = State) ->
     % Format the trace data and write to file
     {ok, _FinalImplState} = erlang:apply(Impl, finalize, [Options, ImplState]),
 
@@ -98,10 +108,19 @@ handle_call(finish, _From, #state{impl = Impl, impl_state = ImplState, options =
     maybe_open_in_program(Options, Filename),
     io:format("Output filename: ~s~n", [Filename]),
 
+    Results = case Return of
+                  value ->
+                      % Values are only readily available in the tracer so we
+                      % let the eflambe_server populate this type of return value
+                      undefined;
+                  filename -> Filename;
+                  flamegraph -> ok % TODO
+              end,
+
     % The only reason we don't stop here is because this is a call and the
     % linked call would crash as well. This feels kind of wrong so I may revisit
     % this
-    {reply, ok, State, {continue, finish}}.
+    {reply, {ok, Results}, State, {continue, finish}}.
 
 -spec handle_cast(any(), state()) -> {noreply, state()}.
 

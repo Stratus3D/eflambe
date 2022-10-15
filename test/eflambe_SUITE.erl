@@ -86,17 +86,24 @@ end_per_testcase(_TestCase, _Config) ->
 %%%===================================================================
 
 capture(_Config) ->
-    Options = [{output_format, plain}],
+    Options = [{output_format, plain}, {return, filename}],
+    MFA = {arithmetic, multiply, 2},
+
+    spawn(fun() ->
+                  timer:sleep(100),
+                  12 = arithmetic:multiply(4, 3)
+               end),
 
     % Shouldn't crash when invoked
-    ok = eflambe:capture({arithmetic, multiply, 2}, 1, Options),
+    {ok, [_Filename]} = eflambe:capture(MFA, 1, Options),
 
-    12 = arithmetic:multiply(4, 3),
+    spawn(fun() ->
+                  timer:sleep(100),
+                  12 = arithmetic:multiply(4, 3)
+               end),
 
     % Should behave the same when run a second time
-    ok = eflambe:capture({arithmetic, multiply, 2}, 1, Options),
-
-    12 = arithmetic:multiply(4, 3),
+    {ok, [_Filename2]} = eflambe:capture(MFA, 1, Options),
 
     ok = application:stop(eflambe).
 
@@ -136,8 +143,12 @@ capture_and_apply_brendan_gregg(_Config) ->
     % Both calls should work with the brendan gregg formatter
     eflambe:apply({arithmetic, multiply, [2, 3]}, Options),
 
-    ok = eflambe:capture({arithmetic, multiply, 2}, 1, Options),
-    12 = arithmetic:multiply(4, 3),
+    spawn_link(fun() ->
+                  timer:sleep(100),
+                  12 = arithmetic:multiply(4, 3)
+               end),
+
+    {ok, _} = eflambe:capture({arithmetic, multiply, 2}, 1, Options),
 
     % Both write separate trace files
     {ok, UpdatedFiles} = file:list_dir("."),
@@ -159,9 +170,13 @@ multiple_captures(_Config) ->
     NumFiles = length(Files),
 
     % Capturing multiple calls should result in multiple output files
-    ok = eflambe:capture({arithmetic, multiply, 2}, 2, Options),
-    12 = arithmetic:multiply(4, 3),
-    20 = arithmetic:multiply(5, 4),
+    spawn_link(fun() ->
+                  timer:sleep(100),
+                  12 = arithmetic:multiply(4, 3),
+                  20 = arithmetic:multiply(5, 4)
+               end),
+
+    {ok, [_Filename1, _Filename2]} = eflambe:capture({arithmetic, multiply, 2}, 2, Options),
 
     % Both write separate trace files
     {ok, UpdatedFiles} = file:list_dir("."),
@@ -178,17 +193,26 @@ multiple_captures(_Config) ->
 
 capture_same_module(_Config) ->
     Options = [{output_format, brendan_gregg}],
+    MFA = {arithmetic, multiply, 2},
+
     % Count files in dir
     {ok, Files} = file:list_dir("."),
     NumFiles = length(Files),
 
-    % First call should succeed
-    ok = eflambe:capture({arithmetic, multiply, 2}, 1, Options),
+    spawn_link(fun() ->
+                  timer:sleep(100),
+                  12 = arithmetic:multiply(4, 3)
+               end),
 
     % This second call should fail and return immediately
-    {error, already_mecked} = eflambe:capture({arithmetic, multiply, 2}, 1, Options),
+    spawn_link(fun() ->
+                       timer:sleep(100),
+                       {error, already_mecked} = eflambe:capture(MFA, 1, Options)
+               end),
 
-    12 = arithmetic:multiply(4, 3),
+    % First call should succeed
+    {ok, [_Filename]} = eflambe:capture(MFA, 1, Options),
+
 
     % First call should succeed and write trace file
     {ok, UpdatedFiles} = file:list_dir("."),
@@ -202,9 +226,12 @@ capture_same_module(_Config) ->
                   end, NewFiles),
 
 
-    % Should behave the same when run a second time
-    ok = eflambe:capture({arithmetic, multiply, 2}, 1, Options),
+    spawn_link(fun() ->
+                       timer:sleep(100),
+                       12 = arithmetic:multiply(4, 3)
+               end),
 
-    12 = arithmetic:multiply(4, 3),
+    % Should behave the same when run a second time
+    {ok, [_Filename2]} = eflambe:capture({arithmetic, multiply, 2}, 1, Options),
 
     ok = application:stop(eflambe).
