@@ -24,11 +24,13 @@
                 timestamp, set_on_spawn]).
 
 -record(state, {
+          callback :: {pid(), reference()},
           module :: atom(),
           max_calls :: integer(),
           calls = 0 :: integer(),
           options = [] :: list(),
-          pid_traces = [] :: list(pid_trace())
+          pid_traces = [] :: list(pid_trace()),
+          results = [] :: list()
          }).
 
 % For capture traces we could end up tracing invocations in multiple processes.
@@ -156,7 +158,8 @@ init([{Module, Function, Arity}, Options]) ->
             {stop, already_mecked};
         ok ->
             MaxCalls = proplists:get_value(max_calls, Options),
-            {ok, #state{module = Module, max_calls = MaxCalls, options = Options}}
+            Callback = proplists:get_value(callback, Options),
+            {ok, #state{callback = Callback, module = Module, max_calls = MaxCalls, options = Options}}
     end.
 
 -spec handle_call(Request :: any(), from(), state()) ->
@@ -226,7 +229,8 @@ handle_call(stop_trace, {FromPid, _}, #state{max_calls = MaxCalls, calls = Calls
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
-handle_continue(finish, State) ->
+handle_continue(finish, #state{callback = PidRef, results = Results} = State) ->
+    ok = gen_server:reply(PidRef, Results),
     {stop, normal, State}.
 
 -spec handle_info(Info :: any(), state()) -> {noreply, state()} |
