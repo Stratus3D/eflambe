@@ -55,6 +55,14 @@
 start_link(Options) ->
     gen_server:start_link(?MODULE, [Options], []).
 
+%%--------------------------------------------------------------------
+%% @doc
+%% Stop the tracer and finalize the trace data
+%%
+%% @end
+%%--------------------------------------------------------------------
+-spec finish(pid()) -> {ok, Results :: any()}.
+
 finish(Pid) ->
     gen_server:call(Pid, finish, infinity).
 
@@ -80,12 +88,12 @@ init([Options]) ->
     % Generate output filename
     {ok, Ext} = erlang:apply(Impl, extension, []),
     Filename = generate_filename(Ext),
-    FullFilename = filename:join([output_directory(Options), Filename]),
+    FullFilename = filename:join([output_directory(FinalOptions), Filename]),
 
     Return = proplists:get_value(return, FinalOptions),
 
     % Initialize implementation state
-    {ok, State} = erlang:apply(Impl, init, [FullFilename, Options]),
+    {ok, State} = erlang:apply(Impl, init, [FinalOptions]),
     InitialState = #state{
                       impl = Impl,
                       impl_state = State,
@@ -101,20 +109,26 @@ init([Options]) ->
 
 handle_call(finish, _From, #state{impl = Impl, impl_state = ImplState, options = Options,
                                  filename = Filename, return = Return} = State) ->
-    % Format the trace data and write to file
-    {ok, _FinalImplState} = erlang:apply(Impl, finalize, [Options, ImplState]),
-
-    % Open flamegraph viewer if specified
-    maybe_open_in_program(Options, Filename),
-    io:format("Output filename: ~s~n", [Filename]),
 
     Results = case Return of
-                  value ->
-                      % Values are only readily available in the tracer so we
-                      % let the eflambe_server populate this type of return value
-                      undefined;
-                  filename -> Filename;
-                  flamegraph -> ok % TODO
+                  flamegraph ->
+                      % Format trace data for return
+                      {ok, FlameGraph} = erlang:apply(Impl, finalize, [return, ImplState]),
+                      FlameGraph;
+
+                  _ ->
+                      % Format the trace data and write to file
+                      {ok, FileData} = erlang:apply(Impl, finalize, [return, ImplState]),
+
+                      % Write the data to file
+                      {ok, File} = file:open(Filename, [write, exclusive]),
+                      ok = file:write(File, FileData),
+                      ok = file:close(File),
+
+                      % Open flamegraph viewer if specified
+                      maybe_open_in_program(Options, Filename),
+                      io:format("Output filename: ~s~n", [Filename]),
+                      Filename
               end,
 
     % The only reason we don't stop here is because this is a call and the

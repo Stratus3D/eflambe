@@ -13,10 +13,9 @@
 
 -behaviour(eflambe_output_formatter).
 
--export([extension/0, init/2, handle_trace_event/2, finalize/2]).
+-export([extension/0, init/1, handle_trace_event/2, finalize/2]).
 
 -record(state, {
-          filename :: any(),
           options :: eflambe:options(),
           stack = [] :: list(),
           accumulator = [] :: list(),
@@ -34,8 +33,8 @@ extension() -> {ok, <<"bggg">>}.
 %%
 %% @end
 %%--------------------------------------------------------------------
-init(Filename, Options) ->
-    {ok, #state{filename = Filename, options = Options}}.
+init(Options) ->
+    {ok, #state{options = Options}}.
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -132,12 +131,9 @@ handle_trace_event(TraceEvent, State) ->
 %%
 %% @end
 %%--------------------------------------------------------------------
-finalize(Options, #state{filename = Filename} = State) ->
-    {ok, File} = file:open(Filename, [write, exclusive]),
+finalize(_Type, #state{options = Options} = State) ->
     Pid = proplists:get_value(pid, Options),
-    ok = file:write(File, dump_to_iolist(Pid, State)),
-    ok = file:close(File),
-    {ok, State}.
+    {ok, dump_to_iolist(Pid, State)}.
 
 %%%===================================================================
 %%% Internal functions
