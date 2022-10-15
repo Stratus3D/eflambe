@@ -15,10 +15,10 @@
 
 %%--------------------------------------------------------------------
 %% This callback exists so the implementation can initialize its own internal
-%% state. This may be useful for opening files, etc...
+%% state.
 %%
 %%--------------------------------------------------------------------
--callback init(Filename :: binary(), Options :: eflambe:options()) -> {ok, State :: any()}.
+-callback init(Options :: eflambe:options()) -> {ok, State :: any()}.
 
 %%--------------------------------------------------------------------
 %% This callback exists so the implementation module can process each individual
@@ -29,8 +29,7 @@
 
 %%--------------------------------------------------------------------
 %% This callback exists so the implementation module can finalize processing of
-%% the trace data. For example, any last minute formatting or flushing of data
-%% in state to disk.
+%% the trace data.
 %%
 %%--------------------------------------------------------------------
--callback finalize(Options :: eflambe:options(), State :: any()) -> {ok, State :: any()}.
+-callback finalize(Type :: return | file, State :: any()) -> {ok, Results :: any()}.

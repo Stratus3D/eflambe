@@ -1,28 +1,27 @@
 %%%-------------------------------------------------------------------
 %%% @doc
-%%% Writes raw trace messages to file. This output format is for testing.
+%%% Generates raw trace messages. This output format is for testing.
 %%% @end
 %%%-------------------------------------------------------------------
 -module(eflambe_plain).
 
 -behaviour(eflambe_output_formatter).
 
--export([extension/0, init/2, handle_trace_event/2, finalize/2]).
+-export([extension/0, init/1, handle_trace_event/2, finalize/2]).
 
--record(state, {file :: any(), options :: eflambe:options()}).
+-record(state, {options :: eflambe:options(), data = []}).
 
 extension() -> {ok, <<"txt">>}.
 
 %%--------------------------------------------------------------------
 %% @doc
 %% This callback exists so the implementation can initialize its own internal
-%% state. This may be useful for opening files, etc...
+%% state.
 %%
 %% @end
 %%--------------------------------------------------------------------
-init(Filename, Options) ->
-    {ok, File} = file:open(Filename, [write, exclusive]),
-    {ok, #state{file = File, options = Options}}.
+init(Options) ->
+    {ok, #state{options = Options}}.
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -31,9 +30,9 @@ init(Filename, Options) ->
 %%
 %% @end
 %%--------------------------------------------------------------------
-handle_trace_event(TraceEvent, #state{file = File} = State) ->
-    ok = file:write(File, io_lib:format("~w~n", [TraceEvent])),
-    {ok, State}.
+handle_trace_event(TraceEvent, #state{data = Data} = State) ->
+    Line = io_lib:format("~w~n", [TraceEvent]),
+    {ok, State#state{data = [Line|Data]}}.
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -43,6 +42,5 @@ handle_trace_event(TraceEvent, #state{file = File} = State) ->
 %%
 %% @end
 %%--------------------------------------------------------------------
-finalize(_Options, #state{file = File} = State) ->
-    ok = file:close(File),
-    {ok, State}.
+finalize(_Type, #state{data = Data}) ->
+    {ok, lists:reverse(Data)}.

@@ -73,6 +73,7 @@ apply(Function) ->
 
 apply({Module, Function, Args}, Options) when is_atom(Module), is_atom(Function), is_list(Args) ->
     CompleteOptions = merge(Options, ?DEFAULT_APPLY_OPTIONS),
+    Return = proplists:get_value(return, CompleteOptions),
 
     setup_for_trace(),
     {ok, TracePid} = eflambe_server:start_trace(CompleteOptions),
@@ -80,11 +81,16 @@ apply({Module, Function, Args}, Options) when is_atom(Module), is_atom(Function)
     % Invoke the original function
     Results = erlang:apply(Module, Function, Args),
 
-    {ok, _} = eflambe_server:stop_trace(TracePid),
-    Results;
+    {ok, FlameGraph} = eflambe_server:stop_trace(TracePid),
+
+    case Return of
+        value -> Results;
+        _ -> FlameGraph
+    end;
 
 apply({Function, Args}, Options) when is_function(Function), is_list(Args) ->
     CompleteOptions = merge(Options, ?DEFAULT_APPLY_OPTIONS),
+    Return = proplists:get_value(return, CompleteOptions),
 
     setup_for_trace(),
     {ok, TracePid} = eflambe_server:start_trace(CompleteOptions),
@@ -92,8 +98,12 @@ apply({Function, Args}, Options) when is_function(Function), is_list(Args) ->
     % Invoke the original function
     Results = erlang:apply(Function, Args),
 
-    {ok, _} = eflambe_server:stop_trace(TracePid),
-    Results.
+    {ok, FlameGraph} = eflambe_server:stop_trace(TracePid),
+
+    case Return of
+        value -> Results;
+        _ -> FlameGraph
+    end.
 
 %%%===================================================================
 %%% Internal functions
