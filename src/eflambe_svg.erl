@@ -1,4 +1,4 @@
--module(eflambe_svg_perl).
+-module(eflambe_svg).
 
 -behaviour(eflambe_output_formatter).
 
@@ -338,7 +338,7 @@ callblock_to_svg(#call{mfa=MFA, depth=Depth, start=Start, width=Width},
 
 svg_color(<<"sleep">>) ->
     % Special blue color for sleeps
-    "rgb(0,8,205)";
+    "rgb(0,130,205)";
 svg_color(Name) ->
     % This is probably the worst way to generate a different color for each
     % block but it is fast.
