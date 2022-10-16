@@ -8,26 +8,25 @@
           options :: eflambe:options(),
           stack = [] :: list(),
           accumulator = [] :: list(),
-          complete_blocks = [] :: list(),
-          incomplete_blocks = [] :: list(),
           useconds = 0 :: integer()
          }).
 
 -record(call, {
-          mfa :: mfa(),
+          mfa :: mfa() | atom(),
           depth = 0 :: integer(),
           start = 0 :: integer(),
           width = 1 :: integer()
          }).
 
 % Constants for text display
--define(AVERAGE_TEXT_WIDTH, 0.59).
+-define(AVERAGE_CHAR_WIDTH, 0.59).
 -define(FONT_SIZE, 12).
+-define(CHAR_WIDTH, ?FONT_SIZE * ?AVERAGE_CHAR_WIDTH).
 
 % Constants for flame graph canvas
 -define(WIDTH, 800).
 -define(YPAD1, ?FONT_SIZE * 4).
--define(YPAD2, ?FONT_SIZE * 2 + 10).
+-define(YPAD2, (?FONT_SIZE * 2) + 10).
 -define(XPAD, 10).
 
 % Constants for flame graph block elements
@@ -106,8 +105,23 @@ handle_trace_event({trace_ts, _Pid, out, _Command0, TS}, #state{stack = Stack} =
 handle_trace_event({trace_ts, _Pid, return_to, MFA, TS}, #state{stack=[_, MFA|Stack]} = State) ->
     generate_new_state(State, [MFA|Stack], TS);
 
-% I don't think I need to worry about these traces
 handle_trace_event({trace_ts, _Pid, return_to, _MFA, _TS}, State) ->
+    {ok, State};
+
+% Ignore garbage collection minor start
+handle_trace_event({trace_ts, _Pid, gc_minor_start, _Stats, _TS}, #state{} = State) ->
+    {ok, State};
+
+% Ignore garbage collection minor end
+handle_trace_event({trace_ts, _Pid, gc_minor_end, _Stats, _TS}, #state{} = State) ->
+    {ok, State};
+
+% Ignore garbage collection major start
+handle_trace_event({trace_ts, _Pid, gc_major_start, _Stats, _TS}, #state{} = State) ->
+    {ok, State};
+
+% Ignore garbage collection major end
+handle_trace_event({trace_ts, _Pid, gc_major_end, _Stats, _TS}, #state{} = State) ->
     {ok, State};
 
 handle_trace_event(TraceEvent, State) ->
@@ -131,11 +145,10 @@ finalize(_Type, #state{accumulator = Acc} = State) ->
                 % Push call to incomplete_blocks
     % Move calls on incomplete_blocks to complete_blocks pushing the deepest call first
     CallBlocks = callstacks_to_blocks(State),
-    io:format("CallBlocks - Line ~p: ~p~n", [?LINE, CallBlocks]),
 
     % We'll scale individual calls by the total width of the flame graph
     TotalSamples = length(Acc),
-    WidthPerUnit = ?WIDTH / TotalSamples,
+    WidthPerUnit = (?WIDTH - (2 * ?XPAD)) / TotalSamples,
 
     % Heigh is deteremined by the deepest call stack
     Depths = lists:map(fun(#call{depth=Depth}) -> Depth end, CallBlocks),
@@ -145,23 +158,81 @@ finalize(_Type, #state{accumulator = Acc} = State) ->
     % Post-process calls
     SvgBlocks = callblocks_to_svg(CallBlocks, TotalSamples, WidthPerUnit, Height),
 
-
     PrivDir = code:priv_dir(eflambe),
     {ok, HeaderBinary} = file:read_file(filename:join([PrivDir, "static/svg_header.svg"])),
-    {ok, [HeaderBinary, SvgBlocks, <<"</svg>">>]}.
+
+    % Header elements
+    HeaderElements = setup_svg_doc(?WIDTH, Height),
+
+    {ok, [HeaderBinary, HeaderElements, SvgBlocks, <<"</svg>">>]}.
 
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
 
-callstacks_to_blocks(#state{accumulator = Acc, incomplete_blocks = Incomplete, complete_blocks = Complete}) ->
-    callstacks_to_blocks(Acc, 0, Incomplete, Complete).
+% Helper function
+svg(Element) -> xmerl:export_simple_element(Element, xmerl_xml).
+
+svg_doc_elem(Width, Height) ->
+    % We can't use xmerl here because I don't want to close the SVG doc in this
+    % function, due to poor choices made earlier.
+    ComputedViewbox = io_lib:format("0 0 ~B ~B", [Width, Height]),
+    [
+     <<"<svg version=\"1.1\" width=\"100%\" onload=\"init(evt)\" viewBox=\"">>,
+     ComputedViewbox,
+     <<"\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">">>
+    ].
+
+setup_svg_doc(Width, Height) ->
+    Black = "rgb(0,0,0)",
+
+    % TODO: Should convert this to xmerl
+    Gradient = <<"<defs>
+        <linearGradient id=\"background\" y1=\"0\" y2=\"1\" x1=\"0\" x2=\"0\" >
+            <stop stop-color=\"#eeeeee\" offset=\"5%\" />
+            <stop stop-color=\"#eeeeb0\" offset=\"95%\" />
+        </linearGradient>
+    </defs>">>,
+
+    [
+     svg_doc_elem(Width, Height),
+     Gradient,
+     % Background gradient
+     svg({rect, [{x, 0},
+                 {y, 0},
+                 {width, Width},
+                 {height, Height},
+                 {fill, "url(#background)"}], []}),
+     % Title
+     svg({text, [{'text-anchor', "middle"},
+                 {x, floor(Width/2)},
+                 {y, ?FONT_SIZE * 2},
+                 {'font-size', ?FONT_SIZE + 5},
+                 {fill, Black}], ["Flame Graph"]}),
+     % Details hover over
+     svg({text, [{x, ?XPAD},
+                 {y, floor(Height - ?YPAD2 / 2)},
+                 {'font-size', ?FONT_SIZE},
+                 {fill, Black},
+                 {id, "details"}], [" "]}),
+     % Unzoom button
+     svg({text, [{x, ?XPAD},
+                 {y, ?FONT_SIZE * 2},
+                 {'font-size', ?FONT_SIZE},
+                 {fill, Black},
+                 {id, "unzoom"},
+                 {onclick, "unzoom()"},
+                 {style, "opacity:0.0;cursor:pointer"}], ["Reset Zoom"]})
+    ].
+
+callstacks_to_blocks(#state{accumulator = Acc}) ->
+    callstacks_to_blocks(Acc, 0, [], []).
 
 callstacks_to_blocks([], _Position, Incomplete, Complete) ->
     Incomplete ++ Complete;
-callstacks_to_blocks([Callstack|Callstacks], Position, Incomplete, Complete) ->
-    {NewIncomplete, NewComplete} = apply_new_callstack(Callstack, 0, Position, Incomplete, Complete),
-    callstacks_to_blocks(Callstacks, Position+1, NewIncomplete, NewComplete).
+callstacks_to_blocks([Callstack|Callstacks], Pos, Incomplete, Complete) ->
+    {NewIncomplete, NewComplete} = apply_new_callstack(Callstack, 0, Pos, Incomplete, Complete),
+    callstacks_to_blocks(Callstacks, Pos+1, NewIncomplete, NewComplete).
 
 apply_new_callstack([], _Depth, _Position, Incomplete, Complete) ->
   {Incomplete, Complete};
@@ -175,8 +246,10 @@ apply_new_callstack([MFA|Callstack], Depth, Pos, Incomplete, Complete) ->
                     apply_new_callstack(Callstack, Depth+1, Pos, [NewCall|Incomplete], Complete);
                 _Call ->
                     % Move call, and any deeper if they exist, to complete list and push new call
-                    {NewComplete, RemainingIncomplete} = pop_any_deeper(Depth, Incomplete),
-                    apply_new_callstack(Callstack, Depth+1, Pos, [NewCall|RemainingIncomplete], NewComplete ++ Complete)
+                    {NewComplete, RemIncomplete} = pop_any_deeper(Depth, Incomplete),
+                    NewIncomplete = [NewCall|RemIncomplete],
+                    FinalComplete = NewComplete ++ Complete,
+                    apply_new_callstack(Callstack, Depth+1, Pos, NewIncomplete, FinalComplete)
             end;
         #call{width=Width} = Call ->
             % Update call
@@ -220,29 +293,31 @@ update_call(#call{mfa=MFA, depth=Depth} = Call, IncompleteCalls) ->
                 end,
     lists:map(UpdateFun, IncompleteCalls).
 
-callblocks_to_svg([], _TotalWidth, _WidthPerUnit, _Height) -> [];
-callblocks_to_svg([Call|Blocks], TotalWidth, WidthPerUnit, Height) ->
-    Svg = callblock_to_svg(Call, TotalWidth, WidthPerUnit, Height),
-    [Svg|callblocks_to_svg(Blocks, TotalWidth, WidthPerUnit, Height)].
+callblocks_to_svg([], _Samples, _WidthPerUnit, _Height) -> [];
+callblocks_to_svg([Call|Blocks], Samples, WidthPerUnit, Height) ->
+    Svg = callblock_to_svg(Call, Samples, WidthPerUnit, Height),
+    [Svg|callblocks_to_svg(Blocks, Samples, WidthPerUnit, Height)].
 
-callblock_to_svg(#call{mfa=MFA, depth=Depth, start=Start, width=Width}, TotalWidth, WidthPerUnit, Height) ->
+callblock_to_svg(#call{mfa=MFA, depth=Depth, start=Start, width=Width},
+                 Samples, WidthPerUnit, Height) ->
     Name = generate_name(MFA, Depth),
-    NumSamples = Width,
-    Percentage = (Width / TotalWidth) * 100,
-    TrimmedText = trimmed_name(Name, Width, TotalWidth),
-    MouseOverLabel = mouseoverlabel(Name, NumSamples, Percentage),
-    ColorFill = svg_color(),
+    Percentage = (Width / Samples) * 100,
+    MouseOverLabel = mouseoverlabel(Name, Width, Percentage),
+    ColorFill = svg_color(Name),
 
     % Compute X and Y coordinates for call block SVG rectangle
     XStart = ?XPAD + (Start * WidthPerUnit),
     XEnd = ?XPAD + ((Start + Width) * WidthPerUnit),
-    YBottom = Height - ?YPAD1 - ((Depth + 1) * ?BLOCK_HEIGHT) + ?FRAMEPAD,
-    YTop =  Height - ?YPAD1 - (Depth * ?BLOCK_HEIGHT),
+    YTop = (Height - ?YPAD1) - ((Depth + 1) * ?BLOCK_HEIGHT) + ?FRAMEPAD,
+    YBottom = (Height - ?YPAD1) - (Depth * ?BLOCK_HEIGHT),
 
     XWidth = XEnd - XStart,
-    YHeight = YTop - YBottom,
+    YHeight = YBottom - YTop,
+
+    TrimmedText = trimmed_name(Name, XWidth),
 
     % Return the iolist representing the SVG group for the call block
+    % TODO: Use xmerl here
     [
      <<"<g class=\"func_g\" onmouseover=\"s('">>,
      MouseOverLabel,
@@ -250,28 +325,44 @@ callblock_to_svg(#call{mfa=MFA, depth=Depth, start=Start, width=Width}, TotalWid
     <<"<title>">>, MouseOverLabel,
     <<"</title><rect x=\"">>,
     format_number(XStart),
-    <<"\" y=\"">>, format_number(YBottom), <<"\" width=\"">>, format_number(XWidth), <<"\" height=\"">>, format_number(YHeight), <<"\" fill=\"">>,
+    <<"\" y=\"">>, format_number(YBottom), <<"\" width=\"">>,
+    format_number(XWidth), <<"\" height=\"">>, format_number(YHeight), <<"\" fill=\"">>,
     ColorFill, <<"\" rx=\"2\" ry=\"2\" />">>,
     <<"<text text-anchor=\"\" x=\"">>,
     format_number(XStart), <<"\" y=\"">>,
-    format_number(YBottom),
+    format_number(YBottom + ?FONT_SIZE),
     <<"\" font-size=\"">>,
     format_number(?FONT_SIZE), <<"\" fill=\"rgb(0,0,0)\"  >">>,
     TrimmedText,
     <<"</text></g>">>].
 
-svg_color() ->
-    "rgb(205,0,7)".
+svg_color(<<"sleep">>) ->
+    % Special blue color for sleeps
+    "rgb(0,8,205)";
+svg_color(Name) ->
+    % This is probably the worst way to generate a different color for each
+    % block but it is fast.
+    Hash = crypto:hash(sha, Name),
+    <<R/integer, G/integer, B/integer, _/binary>> = Hash,
+
+    % Taken from https://github.com/proger/eflame/blob/master/flamegraph.pl#L303-L306
+    Red = 205 + ceil((R / 255) * 50),
+    Green = ceil((G / 255) * 220),
+    Blue = ceil((B / 255) * 55),
+    io_lib:format("rgb(~B,~B,~B)", [Red, Green, Blue]).
 
 generate_name({Module, Function, Arity}, _Depth) ->
     iolist_to_binary(io_lib:format("~s:~s/~B", [Module, Function, Arity]));
 generate_name(Other, _Depth) ->
     iolist_to_binary(io_lib:format("~s", [Other])).
 
-trimmed_name(Name, _Width, _TotalWidth) ->
-    % TODO: Not sure how to compute this
-    <<A/utf8, B/utf8, C/utf8, _/binary>> = Name,
-    <<A, B, C>>.
+trimmed_name(Name, Width) ->
+    MaxChars = floor(Width / ?CHAR_WIDTH),
+    NameChars = string:length(Name),
+    case NameChars =< MaxChars of
+        true -> Name;
+        false -> string:slice(Name, 0, MaxChars)
+    end.
 
 mouseoverlabel(Name, NumSamples, Percentage) ->
     io_lib:format("~s (~B samples, ~.2f%)", [Name, NumSamples, Percentage]).
