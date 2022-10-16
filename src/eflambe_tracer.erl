@@ -80,6 +80,7 @@ init([Options]) ->
     % modules
     Impl = case proplists:get_value(output_format, FinalOptions) of
                brendan_gregg -> eflambe_brendan_gregg;
+               svg -> eflambe_svg;
                perf -> eflambe_perf;
                plain -> eflambe_plain;
                Other -> Other
