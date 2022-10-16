@@ -20,14 +20,19 @@
           width = 1 :: integer()
          }).
 
--define(WIDTH, 800).
-
-% Constants for flame graph block elements
--define(BLOCK_HEIGHT, 16).
-
 % Constants for text display
 -define(AVERAGE_TEXT_WIDTH, 0.59).
 -define(FONT_SIZE, 12).
+
+% Constants for flame graph canvas
+-define(WIDTH, 800).
+-define(YPAD1, ?FONT_SIZE * 4).
+-define(YPAD2, ?FONT_SIZE * 2 + 10).
+-define(XPAD, 10).
+
+% Constants for flame graph block elements
+-define(BLOCK_HEIGHT, 16).
+-define(FRAMEPAD, 1).
 
 
 extension() -> {ok, <<"svg">>}.
@@ -103,7 +108,7 @@ handle_trace_event({trace_ts, _Pid, return_to, MFA, TS}, #state{stack=[_, MFA|St
 
 % I don't think I need to worry about these traces
 handle_trace_event({trace_ts, _Pid, return_to, _MFA, _TS}, State) ->
-    State;
+    {ok, State};
 
 handle_trace_event(TraceEvent, State) ->
     logger:error("Received unexpected trace event: ~w", [TraceEvent]),
@@ -132,12 +137,18 @@ finalize(_Type, #state{accumulator = Acc} = State) ->
     TotalSamples = length(Acc),
     WidthPerUnit = ?WIDTH / TotalSamples,
 
+    % Heigh is deteremined by the deepest call stack
+    Depths = lists:map(fun(#call{depth=Depth}) -> Depth end, CallBlocks),
+    MaxCallDepth = lists:max(Depths),
+    Height = (MaxCallDepth * ?BLOCK_HEIGHT) + ?YPAD1 + ?YPAD2,
+
     % Post-process calls
-    SvgBlocks = callblocks_to_svg(CallBlocks, TotalSamples, WidthPerUnit),
+    SvgBlocks = callblocks_to_svg(CallBlocks, TotalSamples, WidthPerUnit, Height),
+
 
     PrivDir = code:priv_dir(eflambe),
     {ok, HeaderBinary} = file:read_file(filename:join([PrivDir, "static/svg_header.svg"])),
-    {ok, [HeaderBinary, SvgBlocks]}.
+    {ok, [HeaderBinary, SvgBlocks, <<"</svg>">>]}.
 
 %%%===================================================================
 %%% Internal functions
@@ -209,11 +220,12 @@ update_call(#call{mfa=MFA, depth=Depth} = Call, IncompleteCalls) ->
                 end,
     lists:map(UpdateFun, IncompleteCalls).
 
-callblocks_to_svg([], _TotalWidth, _WidthPerUnit) -> [];
-callblocks_to_svg([Call|Blocks], TotalWidth, WidthPerUnit) ->
-    [callblock_to_svg(Call, TotalWidth, WidthPerUnit)|callblocks_to_svg(Blocks, TotalWidth, WidthPerUnit)].
+callblocks_to_svg([], _TotalWidth, _WidthPerUnit, _Height) -> [];
+callblocks_to_svg([Call|Blocks], TotalWidth, WidthPerUnit, Height) ->
+    Svg = callblock_to_svg(Call, TotalWidth, WidthPerUnit, Height),
+    [Svg|callblocks_to_svg(Blocks, TotalWidth, WidthPerUnit, Height)].
 
-callblock_to_svg(#call{mfa=MFA, depth=Depth, start=Start, width=Width}, TotalWidth, WidthPerUnit) ->
+callblock_to_svg(#call{mfa=MFA, depth=Depth, start=Start, width=Width}, TotalWidth, WidthPerUnit, Height) ->
     Name = generate_name(MFA, Depth),
     NumSamples = Width,
     Percentage = (Width / TotalWidth) * 100,
@@ -222,10 +234,10 @@ callblock_to_svg(#call{mfa=MFA, depth=Depth, start=Start, width=Width}, TotalWid
     ColorFill = svg_color(),
 
     % Compute X and Y coordinates for call block SVG rectangle
-    XStart = Start * WidthPerUnit,
-    XEnd = (Start + Width) * WidthPerUnit,
-    YBottom = Depth * ?BLOCK_HEIGHT,
-    YTop = (Depth + 1) * ?BLOCK_HEIGHT,
+    XStart = ?XPAD + (Start * WidthPerUnit),
+    XEnd = ?XPAD + ((Start + Width) * WidthPerUnit),
+    YBottom = Height - ?YPAD1 - ((Depth + 1) * ?BLOCK_HEIGHT) + ?FRAMEPAD,
+    YTop =  Height - ?YPAD1 - (Depth * ?BLOCK_HEIGHT),
 
     XWidth = XEnd - XStart,
     YHeight = YTop - YBottom,
@@ -240,7 +252,11 @@ callblock_to_svg(#call{mfa=MFA, depth=Depth, start=Start, width=Width}, TotalWid
     format_number(XStart),
     <<"\" y=\"">>, format_number(YBottom), <<"\" width=\"">>, format_number(XWidth), <<"\" height=\"">>, format_number(YHeight), <<"\" fill=\"">>,
     ColorFill, <<"\" rx=\"2\" ry=\"2\" />">>,
-    <<"<text text-anchor=\"\" x=\"695.19\" y=\"59.5\" font-size=\"12\" fill=\"rgb(0,0,0)\"  >">>,
+    <<"<text text-anchor=\"\" x=\"">>,
+    format_number(XStart), <<"\" y=\"">>,
+    format_number(YBottom),
+    <<"\" font-size=\"">>,
+    format_number(?FONT_SIZE), <<"\" fill=\"rgb(0,0,0)\"  >">>,
     TrimmedText,
     <<"</text></g>">>].
 
