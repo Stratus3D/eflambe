@@ -7,7 +7,7 @@ on:
       - reopened
   push:
     branches:
-      - main
+      - master
 jobs:
   compile:
     name: Compile code
