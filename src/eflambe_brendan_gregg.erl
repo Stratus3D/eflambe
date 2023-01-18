@@ -115,9 +115,8 @@ handle_trace_event({trace_ts, _Pid, gc_major_start, _Stats, _TS}, #state{} = Sta
 handle_trace_event({trace_ts, _Pid, gc_major_end, _Stats, _TS}, #state{} = State) ->
     {ok, State};
 
-% I don't think I need to worry about these traces
-%handle_trace_event({trace_ts, _Pid, return_to, _MFA, _TS}, State) ->
-%    State;
+handle_trace_event({trace_ts, _Pid, return_to, _MFA, _TS}, State) ->
+    {ok, State};
 
 handle_trace_event(TraceEvent, State) ->
     logger:info("Received unexpected trace event: ~w", [TraceEvent]),
