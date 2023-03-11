@@ -1,0 +1,17 @@
+@title
+
+@doc
+<img src="eflambe-torch-logo.png"/>
+
+eFlambè is designed to be the first profiling tool you reach for during development. It is designed for rapid visualization of program execution. It generates one or more flamegraphs of any function you specify. You can easily select function(s) to profile in the shell without having to alter your code or restart your application. This tool has two distinct advantages over existing flamegraph generators in Erlang:
+
+ <ul>
+   <li>It doesn’t require the user to insert profiling code into the functions they want to visualize as flamegraphs. Everything can be done on the fly without restarting your application.</li>
+   <li>It generates output in formats used by most flamegraph viewers. No manual post-processing is needed.</li>
+   <li>No Perl code.</li>
+</ul>
+
+For usage see the {@link eflambe} API documentation.
+
+<img src="screenshot-speedscope.png"/>
+@end

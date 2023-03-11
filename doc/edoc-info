@@ -1,0 +1,4 @@
+%% encoding: UTF-8
+{application,eflambe}.
+{modules,[eflambe,eflambe_app,eflambe_brendan_gregg,eflambe_output_formatter,
+          eflambe_plain,eflambe_server,eflambe_sup,eflambe_tracer]}.
