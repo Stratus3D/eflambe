@@ -1,5 +1,9 @@
 image::doc/eflambe-torch-logo.png[E flambè, a tool for rapid profiling of Erlang and Elixir applications]
 
+image:https://github.com/Stratus3D/eflambe/workflows/CI/badge.svg[Build Status, link=https://github.com/Stratus3D/eflambe/actions]
+image:https://img.shields.io/hexpm/v/eflambe.svg[Hex.pm, link=https://hex.pm/packages/eflambe]
+image:https://img.shields.io/badge/documentation-gray[Documentation, link=https://hexdocs.pm/eflambe/]
+
 * Designed for rapid generation of flamegraphs - no need to edit source code or recompile!
 * Generates output in several common formats - perf and Brendan Gregg's
 * Interface inspired by recon_trace to automatically stop flamegraph generation
