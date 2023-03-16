@@ -1,5 +1,22 @@
 = Changelog
 
+== 0.3.1
+
+Bugfixes
+
+* Handle `return_to` trace events in Brendan Gregg formatter.
+* Correct types for examples in README.
+* Fix Github CI workflow.
+
+== 0.3.0
+
+Features
+
+* Add option to allow user to control eflambe returns to the code that calls it.
+* Add SVG output format.
+* Refactor code `eflambe_server` is not a named process, and one instead of it is started for each trace.
+* Make `eflambe:capture/3` function synchronous
+
 == 0.2.5
 
 * Lock Rebar3 `project_plugins` to specific versions
