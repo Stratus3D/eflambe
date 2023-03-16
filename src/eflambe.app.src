@@ -1,6 +1,6 @@
 {application,eflambe,
              [{description,"A tool for rapid profiling of Erlang and Elixir applications."},
-              {vsn,"0.3.0"},
+              {vsn,"0.3.1"},
               {registered,[eflambe_sup]},
               {mod,{eflambe_app,[]}},
               {applications,[kernel,stdlib]},
