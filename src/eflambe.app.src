@@ -3,7 +3,7 @@
               {vsn,"0.3.1"},
               {registered,[eflambe_sup]},
               {mod,{eflambe_app,[]}},
-              {applications,[kernel,stdlib]},
+              {applications,[kernel,stdlib,meck]},
               {env,[]},
               {modules,[eflambe,eflambe_app,eflambe_brendan_gregg,
                         eflambe_output_formatter,eflambe_plain,eflambe_server,
