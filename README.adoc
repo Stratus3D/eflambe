@@ -107,6 +107,13 @@ Heavily inspired by:
 
 image:doc/architecture_diagram.svg[Static]
 
+== Articles
+
+Here are a list of articles that have featured Eflambè:
+
+* link:https://stratus3d.com/blog/2021/10/20/introducing-eflambe/[Introducing eFlambé]
+* link:https://ievgenpyrogov.com/requests-without-curl/[Instrumenting HTTP server by making requests without curl]
+
 == Contributing
 
 Feedback is welcome! This was started as a hackathon project but I plan on maintaining it for my teams every day use, so if you see something that could be improved please open an issue!
