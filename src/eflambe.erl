@@ -22,6 +22,8 @@
 
 -type capture_return() :: {ok, [any()]} | {error, already_mecked}.
 
+-export_type([mfa_fun/0, options/0, capture_return/0]).
+
 -define(DEFAULT_OPTIONS, [{output_format, brendan_gregg}]).
 -define(DEFAULT_APPLY_OPTIONS, [{return, value}|?DEFAULT_OPTIONS]).
 -define(DEFAULT_CAPTURE_OPTIONS, [{return, filename}|?DEFAULT_OPTIONS]).

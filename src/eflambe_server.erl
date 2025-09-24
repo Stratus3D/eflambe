@@ -24,7 +24,7 @@
                 timestamp, set_on_spawn]).
 
 -record(state, {
-          callback :: {pid(), reference()},
+          callback :: {pid(), gen_server:reply_tag()},
           module :: atom(),
           max_calls :: integer(),
           calls = 0 :: integer(),
@@ -44,11 +44,12 @@
           tracer_pid :: pid()
          }).
 
--type state() :: #state{}.
--type pid_trace() :: #pid_trace{}.
+-opaque state() :: #state{}.
+-opaque pid_trace() :: #pid_trace{}.
 -type from() :: {pid(), Tag :: term()}.
-
 -type tracer_options() :: [eflambe:option() | {pid, pid()} | {max_calls, pos_integer()}].
+
+-export_type([state/0, pid_trace/0, from/0, tracer_options/0]).
 
 %%%===================================================================
 %%% API
