@@ -11,44 +11,44 @@ on:
 jobs:
   compile:
     name: Compile code
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - uses: erlef/setup-beam@v1
         with:
-          otp-version: '23.3.4.18'
-          rebar3-version: '3.16.1'
+          otp-version: '25.3.2.21'
+          rebar3-version: '3.24.0'
       - run: rebar3 compile
   test:
     name: Run Common Test tests
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - uses: erlef/setup-beam@v1
         with:
           version-type: 'strict'
-          otp-version: '23.3.4.18'
-          rebar3-version: '3.16.1'
+          otp-version: '25.3.2.21'
+          rebar3-version: '3.24.0'
       - run: rebar3 ct
   dialyzer:
     name: Run Dialyzer
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - uses: erlef/setup-beam@v1
         with:
           version-type: 'strict'
-          otp-version: '23.3.4.18'
-          rebar3-version: '3.16.1'
+          otp-version: '25.3.2.21'
+          rebar3-version: '3.24.0'
       - run: rebar3 dialyzer
   lint:
     name: Run elvis linting
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - uses: erlef/setup-beam@v1
         with:
           version-type: 'strict'
-          otp-version: '23.3.4.18'
-          rebar3-version: '3.16.1'
+          otp-version: '25.3.2.21'
+          rebar3-version: '3.24.0'
       - run: rebar3 lint

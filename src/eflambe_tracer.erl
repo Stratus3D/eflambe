@@ -35,10 +35,11 @@
           return :: atom()
          }).
 
--type state() :: #state{}.
+-opaque state() :: #state{}.
 -type from() :: {pid(), Tag :: term()}.
-
 -type tracer_options() :: [eflambe:option() | {pid, pid()}].
+
+-export_type([state/0, from/0, tracer_options/0]).
 
 %%%===================================================================
 %%% API
