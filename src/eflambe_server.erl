@@ -295,4 +295,6 @@ start_erlang_trace(PidToTrace, TracerPid) ->
     erlang:trace(PidToTrace, true, [{tracer, TracerPid} | ?FLAGS]).
 
 stop_erlang_trace(PidToTrace) ->
-    erlang:trace(PidToTrace, false, [all]).
+    erlang:trace(PidToTrace, false, [all]),
+    erlang:trace_pattern({'_', '_', '_'}, false, [local]),
+    erlang:trace_pattern(on_load, false, [local]).
