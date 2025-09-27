@@ -3,6 +3,7 @@
 %%% E flambe server stores state for a capture trace that has been started.
 %%% When no traced processes remain the server shuts down automatically.
 %%% @end
+%%% @hidden
 %%%-------------------------------------------------------------------
 -module(eflambe_server).
 
@@ -69,8 +70,8 @@ start_link(MFA, Options) ->
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Calls the eflambe_server gen_server to start a tracer for the current
-%% process. This is only used for `capture` style traces.
+%% Calls the `eflambe_server' gen_server to start a tracer for the current
+%% process. This is only used for `capture' style traces.
 %%
 %% @end
 %%--------------------------------------------------------------------
@@ -89,8 +90,8 @@ start_capture_trace(ServerPid) ->
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Calls the eflambe_server gen_server to stop a tracer for a specific
-%% process. This is only used for `capture` style traces.
+%% Calls the `eflambe_server' gen_server to stop a tracer for a specific
+%% process. This is only used for `capture' style traces.
 %%
 %% @end
 %%--------------------------------------------------------------------
@@ -103,7 +104,7 @@ stop_capture_trace(ServerPid, Return) ->
 %%--------------------------------------------------------------------
 %% @doc
 %% Starts the tracer in the current process (no gen_server). This is
-%% used for `apply` style traces only.
+%% used for `apply' style traces only.
 %%
 %% @end
 %%--------------------------------------------------------------------
@@ -121,7 +122,7 @@ start_trace(Options) ->
 %%--------------------------------------------------------------------
 %% @doc
 %% Stops a tracer and finishes a trace in the current process. This is
-%% used for `apply` style traces only as everything is done in the
+%% used for `apply' style traces only as everything is done in the
 %% current process.
 %%
 %% @end

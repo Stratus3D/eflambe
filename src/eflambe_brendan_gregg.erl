@@ -1,4 +1,5 @@
 %%%-------------------------------------------------------------------
+%%% @copyright 2021 Trevor Brown (Apache-2.0 License)
 %%% @doc
 %%% Writes trace data to file formatted as Brendan Gregg's collapsed stack
 %%% format.

@@ -4,6 +4,7 @@
 %%% gen_server is only intended to be used by the eflambe_server to receive
 %%% trace messages and write them to the appropriate formatter module.
 %%% @end
+%%% @hidden
 %%%-------------------------------------------------------------------
 -module(eflambe_tracer).
 
