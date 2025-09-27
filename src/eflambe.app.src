@@ -10,4 +10,4 @@
                         eflambe_sup,eflambe_tracer]},
               {licenses,["Apache-2.0"]},
               {links,[{"Github","https://github.com/Stratus3D/eflambe/"},
-                      {"Documentation","https://stratus3d.com/eflambe/"}]}]}.
+                      {"Documentation","https://hexdocs.pm/eflambe/"}]}]}.
